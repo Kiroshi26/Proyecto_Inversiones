@@ -9,7 +9,6 @@ from src.validaciones import (
     validar_dataframe_no_vacio,
 )
 
-
 COLUMNAS_SALDOS = [
     "ANIO",
     "CONTABILIDAD",
@@ -46,8 +45,7 @@ def dsn_disponible(nombre_dsn: str) -> bool:
     nombre_buscado = nombre_dsn.strip().upper()
 
     return any(
-        nombre.strip().upper() == nombre_buscado
-        for nombre in obtener_dsn_disponibles()
+        nombre.strip().upper() == nombre_buscado for nombre in obtener_dsn_disponibles()
     )
 
 
@@ -56,18 +54,12 @@ def validar_dsn(nombre_dsn: str) -> None:
     Genera un error controlado si el DSN no está disponible.
     """
     if not nombre_dsn or not nombre_dsn.strip():
-        raise ErrorBaseDatos(
-            "El nombre del DSN está vacío."
-        )
+        raise ErrorBaseDatos("El nombre del DSN está vacío.")
 
     if not dsn_disponible(nombre_dsn):
         disponibles = obtener_dsn_disponibles()
 
-        lista_disponibles = (
-            ", ".join(disponibles)
-            if disponibles
-            else "ninguno"
-        )
+        lista_disponibles = ", ".join(disponibles) if disponibles else "ninguno"
 
         raise ErrorBaseDatos(
             f"El DSN '{nombre_dsn}' no está disponible para "
@@ -87,27 +79,17 @@ def construir_cadena_conexion(
     Construye la cadena ODBC sin almacenar las credenciales.
     """
     if not nombre_dsn or not nombre_dsn.strip():
-        raise ErrorBaseDatos(
-            "El nombre del DSN está vacío."
-        )
+        raise ErrorBaseDatos("El nombre del DSN está vacío.")
 
     if not usuario or not usuario.strip():
-        raise ErrorBaseDatos(
-            "El usuario de Nacional está vacío."
-        )
+        raise ErrorBaseDatos("El usuario de Nacional está vacío.")
 
     if not clave:
-        raise ErrorBaseDatos(
-            "La contraseña de Nacional está vacía."
-        )
+        raise ErrorBaseDatos("La contraseña de Nacional está vacía.")
 
     usuario_normalizado = usuario.strip().upper()
 
-    return (
-        f"DSN={nombre_dsn.strip()};"
-        f"UID={usuario_normalizado};"
-        f"PWD={clave}"
-    )
+    return f"DSN={nombre_dsn.strip()};" f"UID={usuario_normalizado};" f"PWD={clave}"
 
 
 def normalizar_saldos(
@@ -176,9 +158,7 @@ def ejecutar_consulta_saldos(
     validar_dsn(nombre_dsn)
 
     if not consulta or not consulta.strip():
-        raise ErrorBaseDatos(
-            "La consulta SQL está vacía."
-        )
+        raise ErrorBaseDatos("La consulta SQL está vacía.")
 
     cadena_conexion = construir_cadena_conexion(
         nombre_dsn=nombre_dsn,

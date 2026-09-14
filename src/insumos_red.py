@@ -55,29 +55,19 @@ def construir_nombre_formato_351(
         {},
     )
 
-    patron = archivos.get(
-        "formato_351_patron"
-    )
+    patron = archivos.get("formato_351_patron")
 
     if not patron:
-        raise ErrorInsumosRed(
-            "Falta configurar "
-            "'archivos.formato_351_patron'."
-        )
+        raise ErrorInsumosRed("Falta configurar " "'archivos.formato_351_patron'.")
 
-    fecha_texto = fecha_corte.strftime(
-        "%Y%m%d"
-    )
+    fecha_texto = fecha_corte.strftime("%Y%m%d")
 
     try:
-        nombre = patron.format(
-            fecha_corte=fecha_texto
-        )
+        nombre = patron.format(fecha_corte=fecha_texto)
 
     except (KeyError, ValueError) as error:
         raise ErrorInsumosRed(
-            "El patron del Formato 351 no es valido. "
-            "Debe contener '{fecha_corte}'."
+            "El patron del Formato 351 no es valido. " "Debe contener '{fecha_corte}'."
         ) from error
 
     return nombre
@@ -92,20 +82,15 @@ def validar_archivo_origen(
     ruta = Path(ruta)
 
     if not ruta.exists():
-        raise ErrorInsumosRed(
-            f"No se encontro el archivo corporativo: {ruta}"
-        )
+        raise ErrorInsumosRed(f"No se encontro el archivo corporativo: {ruta}")
 
     if not ruta.is_file():
         raise ErrorInsumosRed(
-            "La ruta corporativa no corresponde "
-            f"a un archivo: {ruta}"
+            "La ruta corporativa no corresponde " f"a un archivo: {ruta}"
         )
 
     if ruta.stat().st_size == 0:
-        raise ErrorInsumosRed(
-            f"El archivo corporativo esta vacio: {ruta}"
-        )
+        raise ErrorInsumosRed(f"El archivo corporativo esta vacio: {ruta}")
 
     try:
         with ruta.open(
@@ -115,8 +100,7 @@ def validar_archivo_origen(
 
     except OSError as error:
         raise ErrorInsumosRed(
-            "No fue posible leer el archivo corporativo: "
-            f"{ruta}. Detalle: {error}"
+            "No fue posible leer el archivo corporativo: " f"{ruta}. Detalle: {error}"
         ) from error
 
 
@@ -137,21 +121,16 @@ def calcular_hash_sha256(
             "rb",
         ) as archivo:
             while True:
-                bloque = archivo.read(
-                    1024 * 1024
-                )
+                bloque = archivo.read(1024 * 1024)
 
                 if not bloque:
                     break
 
-                hash_archivo.update(
-                    bloque
-                )
+                hash_archivo.update(bloque)
 
     except OSError as error:
         raise ErrorInsumosRed(
-            "No fue posible calcular la huella "
-            f"del archivo {ruta}: {error}"
+            "No fue posible calcular la huella " f"del archivo {ruta}: {error}"
         ) from error
 
     return hash_archivo.hexdigest()
@@ -165,32 +144,21 @@ def copiar_archivo_controlado(
     Copia un archivo de red a una carpeta local
     y verifica tamaño y huella SHA-256.
     """
-    ruta_origen = Path(
-        ruta_origen
-    )
+    ruta_origen = Path(ruta_origen)
 
-    carpeta_destino = Path(
-        carpeta_destino
-    )
+    carpeta_destino = Path(carpeta_destino)
 
-    validar_archivo_origen(
-        ruta_origen
-    )
+    validar_archivo_origen(ruta_origen)
 
     carpeta_destino.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    ruta_destino = (
-        carpeta_destino
-        / ruta_origen.name
-    )
+    ruta_destino = carpeta_destino / ruta_origen.name
 
     estadisticas_origen = ruta_origen.stat()
-    hash_origen = calcular_hash_sha256(
-        ruta_origen
-    )
+    hash_origen = calcular_hash_sha256(ruta_origen)
 
     try:
         shutil.copy2(
@@ -200,25 +168,19 @@ def copiar_archivo_controlado(
 
     except PermissionError as error:
         raise ErrorInsumosRed(
-            "No fue posible copiar el archivo a la "
-            f"carpeta local: {ruta_destino}"
+            "No fue posible copiar el archivo a la " f"carpeta local: {ruta_destino}"
         ) from error
 
     except OSError as error:
         raise ErrorInsumosRed(
-            "Ocurrio un error al copiar el archivo "
-            f"{ruta_origen.name}: {error}"
+            "Ocurrio un error al copiar el archivo " f"{ruta_origen.name}: {error}"
         ) from error
 
     if not ruta_destino.exists():
-        raise ErrorInsumosRed(
-            f"No se creo la copia local: {ruta_destino}"
-        )
+        raise ErrorInsumosRed(f"No se creo la copia local: {ruta_destino}")
 
     if ruta_destino.stat().st_size == 0:
-        raise ErrorInsumosRed(
-            f"La copia local quedo vacia: {ruta_destino}"
-        )
+        raise ErrorInsumosRed(f"La copia local quedo vacia: {ruta_destino}")
 
     tamano_destino = ruta_destino.stat().st_size
 
@@ -228,9 +190,7 @@ def copiar_archivo_controlado(
             f"que el archivo de red: {ruta_origen.name}"
         )
 
-    hash_destino = calcular_hash_sha256(
-        ruta_destino
-    )
+    hash_destino = calcular_hash_sha256(ruta_destino)
 
     if hash_destino != hash_origen:
         raise ErrorInsumosRed(
@@ -238,9 +198,7 @@ def copiar_archivo_controlado(
             f"con el archivo de red: {ruta_origen.name}"
         )
 
-    fecha_modificacion = datetime.fromtimestamp(
-        estadisticas_origen.st_mtime
-    )
+    fecha_modificacion = datetime.fromtimestamp(estadisticas_origen.st_mtime)
 
     return ArchivoCopiado(
         nombre=ruta_origen.name,
@@ -259,30 +217,18 @@ def crear_carpeta_ejecucion(
     """
     Crea una carpeta local única para una ejecución.
     """
-    carpeta_base = Path(
-        carpeta_base
-    )
+    carpeta_base = Path(carpeta_base)
 
-    fecha_hora = datetime.now().strftime(
-        "%Y%m%d_%H%M%S"
-    )
+    fecha_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    nombre_carpeta = (
-        f"{periodo}_{fecha_hora}"
-    )
+    nombre_carpeta = f"{periodo}_{fecha_hora}"
 
-    carpeta_ejecucion = (
-        carpeta_base
-        / nombre_carpeta
-    )
+    carpeta_ejecucion = carpeta_base / nombre_carpeta
 
     contador = 1
 
     while carpeta_ejecucion.exists():
-        carpeta_ejecucion = (
-            carpeta_base
-            / f"{nombre_carpeta}_{contador}"
-        )
+        carpeta_ejecucion = carpeta_base / f"{nombre_carpeta}_{contador}"
 
         contador += 1
 
@@ -316,44 +262,23 @@ def preparar_insumos_desde_red(
         fecha_corte=fecha_corte,
     )
 
-    nombre_mapas = archivos.get(
-        "mapas_contables"
-    )
+    nombre_mapas = archivos.get("mapas_contables")
 
-    nombre_centros = archivos.get(
-        "mapas_centros_costos"
-    )
+    nombre_centros = archivos.get("mapas_centros_costos")
 
     if not nombre_mapas:
-        raise ErrorInsumosRed(
-            "Falta configurar "
-            "'archivos.mapas_contables'."
-        )
+        raise ErrorInsumosRed("Falta configurar " "'archivos.mapas_contables'.")
 
     if not nombre_centros:
-        raise ErrorInsumosRed(
-            "Falta configurar "
-            "'archivos.mapas_centros_costos'."
-        )
+        raise ErrorInsumosRed("Falta configurar " "'archivos.mapas_centros_costos'.")
 
-    ruta_formato_351 = (
-        rutas_red["formato_351"]
-        / nombre_formato_351
-    )
+    ruta_formato_351 = rutas_red["formato_351"] / nombre_formato_351
 
-    ruta_mapas = (
-        rutas_red["mapas_contables"]
-        / nombre_mapas
-    )
+    ruta_mapas = rutas_red["mapas_contables"] / nombre_mapas
 
-    ruta_centros = (
-        rutas_red["mapas_contables"]
-        / nombre_centros
-    )
+    ruta_centros = rutas_red["mapas_contables"] / nombre_centros
 
-    periodo = fecha_corte.strftime(
-        "%Y-%m"
-    )
+    periodo = fecha_corte.strftime("%Y-%m")
 
     carpeta_ejecucion = crear_carpeta_ejecucion(
         carpeta_base=carpeta_ejecuciones,

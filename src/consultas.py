@@ -29,24 +29,16 @@ def validar_periodo_consulta(anio, mes):
     la consulta contable.
     """
     if not isinstance(anio, int):
-        raise ErrorConsulta(
-            "El anio debe ser un numero entero."
-        )
+        raise ErrorConsulta("El anio debe ser un numero entero.")
 
     if not isinstance(mes, int):
-        raise ErrorConsulta(
-            "El mes debe ser un numero entero."
-        )
+        raise ErrorConsulta("El mes debe ser un numero entero.")
 
     if not 2022 <= anio <= 2031:
-        raise ErrorConsulta(
-            f"El anio {anio} no esta permitido."
-        )
+        raise ErrorConsulta(f"El anio {anio} no esta permitido.")
 
     if mes not in COLUMNAS_MENSUALES:
-        raise ErrorConsulta(
-            f"El mes {mes} no esta configurado."
-        )
+        raise ErrorConsulta(f"El mes {mes} no esta configurado.")
 
 
 def obtener_columnas_hasta_mes(mes):
@@ -55,17 +47,13 @@ def obtener_columnas_hasta_mes(mes):
     desde enero hasta el mes solicitado.
     """
     if mes not in COLUMNAS_MENSUALES:
-        raise ErrorConsulta(
-            f"El mes {mes} no esta configurado."
-        )
+        raise ErrorConsulta(f"El mes {mes} no esta configurado.")
 
     debitos = []
     creditos = []
 
     for numero_mes in range(1, mes + 1):
-        debito, credito = COLUMNAS_MENSUALES[
-            numero_mes
-        ]
+        debito, credito = COLUMNAS_MENSUALES[numero_mes]
 
         debitos.append(debito)
         creditos.append(credito)
@@ -81,14 +69,11 @@ def validar_nombre_columna(columna):
     nombre = str(columna).strip().upper()
 
     if not nombre:
-        raise ErrorConsulta(
-            "Se encontro un nombre de columna vacio."
-        )
+        raise ErrorConsulta("Se encontro un nombre de columna vacio.")
 
     if not nombre.isalnum():
         raise ErrorConsulta(
-            "El nombre de columna contiene caracteres "
-            f"no permitidos: {nombre}"
+            "El nombre de columna contiene caracteres " f"no permitidos: {nombre}"
         )
 
     return nombre
@@ -107,13 +92,9 @@ def construir_suma(columnas, alias="A"):
     expresiones = []
 
     for columna in columnas:
-        nombre = validar_nombre_columna(
-            columna
-        )
+        nombre = validar_nombre_columna(columna)
 
-        expresiones.append(
-            f"{alias}.{nombre}"
-        )
+        expresiones.append(f"{alias}.{nombre}")
 
     return " + ".join(expresiones)
 
@@ -130,8 +111,7 @@ def construir_movimiento_neto(
     """
     if len(debitos) != len(creditos):
         raise ErrorConsulta(
-            "La cantidad de columnas de debito y credito "
-            "no coincide."
+            "La cantidad de columnas de debito y credito " "no coincide."
         )
 
     if not debitos:
@@ -143,17 +123,11 @@ def construir_movimiento_neto(
         debitos,
         creditos,
     ):
-        nombre_debito = validar_nombre_columna(
-            debito
-        )
+        nombre_debito = validar_nombre_columna(debito)
 
-        nombre_credito = validar_nombre_columna(
-            credito
-        )
+        nombre_credito = validar_nombre_columna(credito)
 
-        expresiones.append(
-            f"(A.{nombre_debito} - A.{nombre_credito})"
-        )
+        expresiones.append(f"(A.{nombre_debito} - A.{nombre_credito})")
 
     return " + ".join(expresiones)
 
@@ -171,43 +145,25 @@ def construir_consulta_saldos(anio, mes):
         mes,
     )
 
-    debitos_acumulados, creditos_acumulados = (
-        obtener_columnas_hasta_mes(
-            mes
-        )
-    )
+    debitos_acumulados, creditos_acumulados = obtener_columnas_hasta_mes(mes)
 
-    debito_mes, credito_mes = (
-        COLUMNAS_MENSUALES[mes]
-    )
+    debito_mes, credito_mes = COLUMNAS_MENSUALES[mes]
 
-    debito_mes = validar_nombre_columna(
-        debito_mes
-    )
+    debito_mes = validar_nombre_columna(debito_mes)
 
-    credito_mes = validar_nombre_columna(
-        credito_mes
-    )
+    credito_mes = validar_nombre_columna(credito_mes)
 
     if mes == 1:
         debitos_anteriores = []
         creditos_anteriores = []
     else:
-        debitos_anteriores = (
-            debitos_acumulados[:-1]
-        )
+        debitos_anteriores = debitos_acumulados[:-1]
 
-        creditos_anteriores = (
-            creditos_acumulados[:-1]
-        )
+        creditos_anteriores = creditos_acumulados[:-1]
 
-    suma_debitos = construir_suma(
-        debitos_acumulados
-    )
+    suma_debitos = construir_suma(debitos_acumulados)
 
-    suma_creditos = construir_suma(
-        creditos_acumulados
-    )
+    suma_creditos = construir_suma(creditos_acumulados)
 
     movimiento_acumulado = construir_movimiento_neto(
         debitos_acumulados,
@@ -220,17 +176,11 @@ def construir_consulta_saldos(anio, mes):
     )
 
     if mes == 1:
-        expresion_saldo_anterior = (
-            "A.INITER"
-        )
+        expresion_saldo_anterior = "A.INITER"
     else:
-        expresion_saldo_anterior = (
-            f"A.INITER + {movimiento_anterior}"
-        )
+        expresion_saldo_anterior = f"A.INITER + {movimiento_anterior}"
 
-    expresion_total_mes = (
-        f"A.INITER + {movimiento_acumulado}"
-    )
+    expresion_total_mes = f"A.INITER + {movimiento_acumulado}"
 
     consulta = f"""
 SELECT
@@ -252,9 +202,7 @@ WHERE A.ANOTER = {anio}
 """.strip()
 
     if not consulta:
-        raise ErrorConsulta(
-            "La consulta SQL quedo vacia."
-        )
+        raise ErrorConsulta("La consulta SQL quedo vacia.")
 
     return consulta
 
@@ -269,11 +217,6 @@ def obtener_descripcion_consulta(anio, mes):
         mes,
     )
 
-    abreviatura, nombre = MESES[
-        mes
-    ]
+    abreviatura, nombre = MESES[mes]
 
-    return (
-        f"Consulta de saldos para {nombre} de {anio} "
-        f"({abreviatura})"
-    )
+    return f"Consulta de saldos para {nombre} de {anio} " f"({abreviatura})"

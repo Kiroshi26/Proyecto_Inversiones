@@ -24,13 +24,9 @@ from src.parametros import (
     crear_parametros,
 )
 
-
 CARPETA_PROYECTO = Path(__file__).resolve().parent
 
-RUTA_CONFIGURACION = (
-    CARPETA_PROYECTO
-    / "config.yaml"
-)
+RUTA_CONFIGURACION = CARPETA_PROYECTO / "config.yaml"
 
 COLUMNAS_ESPERADAS = [
     "ANIO",
@@ -81,8 +77,7 @@ def leer_argumentos():
     """
     parser = argparse.ArgumentParser(
         description=(
-            "Consulta saldos reales de Nacional "
-            "y guarda el resultado localmente."
+            "Consulta saldos reales de Nacional " "y guarda el resultado localmente."
         )
     )
 
@@ -110,27 +105,20 @@ def validar_dsn(nombre_dsn):
     fuentes = pyodbc.dataSources()
 
     coincidencias = {
-        nombre.strip().upper(): controlador
-        for nombre, controlador in fuentes.items()
+        nombre.strip().upper(): controlador for nombre, controlador in fuentes.items()
     }
 
-    nombre_normalizado = str(
-        nombre_dsn
-    ).strip().upper()
+    nombre_normalizado = str(nombre_dsn).strip().upper()
 
     if nombre_normalizado not in coincidencias:
-        disponibles = ", ".join(
-            sorted(fuentes.keys())
-        )
+        disponibles = ", ".join(sorted(fuentes.keys()))
 
         raise ErrorConsultaNacional(
             f"El DSN '{nombre_dsn}' no está disponible. "
             f"DSN visibles: {disponibles or 'ninguno'}"
         )
 
-    return coincidencias[
-        nombre_normalizado
-    ]
+    return coincidencias[nombre_normalizado]
 
 
 def solicitar_credenciales():
@@ -140,31 +128,19 @@ def solicitar_credenciales():
     La contraseña no se muestra y no se guarda.
     """
     print()
-    print(
-        "Ingrese las credenciales autorizadas de iSeries."
-    )
-    print(
-        "La contraseña no se mostrará ni se guardará."
-    )
+    print("Ingrese las credenciales autorizadas de iSeries.")
+    print("La contraseña no se mostrará ni se guardará.")
     print()
 
-    usuario = input(
-        "Usuario de Nacional: "
-    ).strip().upper()
+    usuario = input("Usuario de Nacional: ").strip().upper()
 
-    clave = getpass.getpass(
-        "Contraseña de Nacional: "
-    )
+    clave = getpass.getpass("Contraseña de Nacional: ")
 
     if not usuario:
-        raise ErrorConsultaNacional(
-            "El usuario de Nacional está vacío."
-        )
+        raise ErrorConsultaNacional("El usuario de Nacional está vacío.")
 
     if not clave:
-        raise ErrorConsultaNacional(
-            "La contraseña de Nacional está vacía."
-        )
+        raise ErrorConsultaNacional("La contraseña de Nacional está vacía.")
 
     return usuario, clave
 
@@ -177,11 +153,7 @@ def construir_cadena_conexion(
     """
     Construye la cadena ODBC únicamente en memoria.
     """
-    return (
-        f"DSN={nombre_dsn};"
-        f"UID={usuario};"
-        f"PWD={clave};"
-    )
+    return f"DSN={nombre_dsn};" f"UID={usuario};" f"PWD={clave};"
 
 
 def ejecutar_consulta(
@@ -200,21 +172,13 @@ def ejecutar_consulta(
         cursor.execute(consulta)
 
         if cursor.description is None:
-            raise ErrorConsultaNacional(
-                "La consulta no devolvió columnas."
-            )
+            raise ErrorConsultaNacional("La consulta no devolvió columnas.")
 
-        columnas = [
-            descripcion[0]
-            for descripcion in cursor.description
-        ]
+        columnas = [descripcion[0] for descripcion in cursor.description]
 
         filas = cursor.fetchall()
 
-        datos = [
-            tuple(fila)
-            for fila in filas
-        ]
+        datos = [tuple(fila) for fila in filas]
 
         dataframe = pd.DataFrame(
             datos,
@@ -225,8 +189,7 @@ def ejecutar_consulta(
 
     except pyodbc.Error as error:
         raise ErrorConsultaNacional(
-            "No fue posible ejecutar la consulta "
-            f"contable. Detalle ODBC: {error}"
+            "No fue posible ejecutar la consulta " f"contable. Detalle ODBC: {error}"
         ) from error
 
     finally:
@@ -241,22 +204,16 @@ def validar_columnas_resultado(
     Comprueba que Nacional haya devuelto
     todas las columnas esperadas.
     """
-    columnas_actuales = {
-        str(columna).strip().upper()
-        for columna in dataframe.columns
-    }
+    columnas_actuales = {str(columna).strip().upper() for columna in dataframe.columns}
 
     columnas_faltantes = [
-        columna
-        for columna in COLUMNAS_ESPERADAS
-        if columna not in columnas_actuales
+        columna for columna in COLUMNAS_ESPERADAS if columna not in columnas_actuales
     ]
 
     if columnas_faltantes:
         raise ErrorConsultaNacional(
             "La consulta no devolvió las columnas "
-            "esperadas: "
-            + ", ".join(columnas_faltantes)
+            "esperadas: " + ", ".join(columnas_faltantes)
         )
 
 
@@ -293,31 +250,18 @@ def normalizar_resultado(
     agrupar ni eliminar registros.
     """
     if dataframe.empty:
-        raise ErrorConsultaNacional(
-            "La consulta no devolvió registros."
-        )
+        raise ErrorConsultaNacional("La consulta no devolvió registros.")
 
     resultado = dataframe.copy()
 
-    resultado.columns = [
-        str(columna).strip().upper()
-        for columna in resultado.columns
-    ]
+    resultado.columns = [str(columna).strip().upper() for columna in resultado.columns]
 
-    validar_columnas_resultado(
-        resultado
-    )
+    validar_columnas_resultado(resultado)
 
-    resultado = resultado[
-        COLUMNAS_ESPERADAS
-    ].copy()
+    resultado = resultado[COLUMNAS_ESPERADAS].copy()
 
     for columna in COLUMNAS_IDENTIFICADOR:
-        resultado[columna] = resultado[
-            columna
-        ].apply(
-            normalizar_identificador
-        )
+        resultado[columna] = resultado[columna].apply(normalizar_identificador)
 
     for columna in COLUMNAS_NUMERICAS:
         resultado[columna] = pd.to_numeric(
@@ -325,18 +269,12 @@ def normalizar_resultado(
             errors="coerce",
         ).fillna(0)
 
-    resultado["ANIO"] = resultado[
-        "ANIO"
-    ].astype(int)
+    resultado["ANIO"] = resultado["ANIO"].astype(int)
 
-    cuentas_invalidas = ~resultado[
-        "CUENTA"
-    ].str.startswith("13")
+    cuentas_invalidas = ~resultado["CUENTA"].str.startswith("13")
 
     if cuentas_invalidas.any():
-        cantidad = int(
-            cuentas_invalidas.sum()
-        )
+        cantidad = int(cuentas_invalidas.sum())
 
         raise ErrorConsultaNacional(
             "Nacional devolvió "
@@ -364,9 +302,7 @@ def construir_diagnostico(
         keep=False,
     )
 
-    cantidad_duplicados = int(
-        duplicados_clave.sum()
-    )
+    cantidad_duplicados = int(duplicados_clave.sum())
 
     resumen = pd.DataFrame(
         [
@@ -380,69 +316,47 @@ def construir_diagnostico(
             },
             {
                 "INDICADOR": "Contabilidades únicas",
-                "VALOR": saldos[
-                    "CONTABILIDAD"
-                ].nunique(),
+                "VALOR": saldos["CONTABILIDAD"].nunique(),
             },
             {
                 "INDICADOR": "Cuentas únicas",
-                "VALOR": saldos[
-                    "CUENTA"
-                ].nunique(),
+                "VALOR": saldos["CUENTA"].nunique(),
             },
             {
-                "INDICADOR": (
-                    "Filas con clave contable repetida"
-                ),
+                "INDICADOR": ("Filas con clave contable repetida"),
                 "VALOR": cantidad_duplicados,
             },
             {
                 "INDICADOR": "Total saldo inicial",
-                "VALOR": saldos[
-                    "SALDO_INICIAL"
-                ].sum(),
+                "VALOR": saldos["SALDO_INICIAL"].sum(),
             },
             {
                 "INDICADOR": "Total débitos acumulados",
-                "VALOR": saldos[
-                    "DEBITOA"
-                ].sum(),
+                "VALOR": saldos["DEBITOA"].sum(),
             },
             {
                 "INDICADOR": "Total créditos acumulados",
-                "VALOR": saldos[
-                    "CREDITOA"
-                ].sum(),
+                "VALOR": saldos["CREDITOA"].sum(),
             },
             {
                 "INDICADOR": "Total saldo final acumulado",
-                "VALOR": saldos[
-                    "SALDO_FINAL_ACUM"
-                ].sum(),
+                "VALOR": saldos["SALDO_FINAL_ACUM"].sum(),
             },
             {
                 "INDICADOR": "Total saldo anterior",
-                "VALOR": saldos[
-                    "SALDO_ANTERIOR"
-                ].sum(),
+                "VALOR": saldos["SALDO_ANTERIOR"].sum(),
             },
             {
                 "INDICADOR": "Total débito del mes",
-                "VALOR": saldos[
-                    "DEBITOM"
-                ].sum(),
+                "VALOR": saldos["DEBITOM"].sum(),
             },
             {
                 "INDICADOR": "Total crédito del mes",
-                "VALOR": saldos[
-                    "CREDITOM"
-                ].sum(),
+                "VALOR": saldos["CREDITOM"].sum(),
             },
             {
                 "INDICADOR": "Total del mes",
-                "VALOR": saldos[
-                    "TOTAL_MES"
-                ].sum(),
+                "VALOR": saldos["TOTAL_MES"].sum(),
             },
             {
                 "INDICADOR": "Duración en segundos",
@@ -455,9 +369,7 @@ def construir_diagnostico(
     )
 
     if cantidad_duplicados > 0:
-        duplicados = saldos.loc[
-            duplicados_clave
-        ].copy()
+        duplicados = saldos.loc[duplicados_clave].copy()
 
         duplicados = duplicados.sort_values(
             by=[
@@ -469,9 +381,7 @@ def construir_diagnostico(
         )
 
     else:
-        duplicados = pd.DataFrame(
-            columns=COLUMNAS_ESPERADAS
-        )
+        duplicados = pd.DataFrame(columns=COLUMNAS_ESPERADAS)
 
     return resumen, duplicados
 
@@ -484,10 +394,7 @@ def guardar_consulta_sql(
     """
     Guarda localmente el SQL realmente ejecutado.
     """
-    ruta_sql = (
-        carpeta_salida
-        / f"Consulta_Saldos_{periodo}_PRUEBA.sql"
-    )
+    ruta_sql = carpeta_salida / f"Consulta_Saldos_{periodo}_PRUEBA.sql"
 
     ruta_sql.write_text(
         consulta,
@@ -508,28 +415,15 @@ def guardar_resultado_excel(
     Guarda el resultado bruto y el diagnóstico
     en un archivo Excel local.
     """
-    nombre_archivo = (
-        f"Saldos_Nacional_"
-        f"{periodo}_BRUTO_PRUEBA.xlsx"
-    )
+    nombre_archivo = f"Saldos_Nacional_" f"{periodo}_BRUTO_PRUEBA.xlsx"
 
-    ruta_salida = (
-        carpeta_salida
-        / nombre_archivo
-    )
+    ruta_salida = carpeta_salida / nombre_archivo
 
     if ruta_salida.exists():
-        fecha_hora = datetime.now().strftime(
-            "%Y%m%d_%H%M%S"
-        )
+        fecha_hora = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        ruta_salida = (
-            carpeta_salida
-            / (
-                f"Saldos_Nacional_"
-                f"{periodo}_BRUTO_PRUEBA_"
-                f"{fecha_hora}.xlsx"
-            )
+        ruta_salida = carpeta_salida / (
+            f"Saldos_Nacional_" f"{periodo}_BRUTO_PRUEBA_" f"{fecha_hora}.xlsx"
         )
 
     try:
@@ -558,11 +452,7 @@ def guardar_resultado_excel(
             libro = writer.book
 
             formato_monetario = libro.add_format(
-                {
-                    "num_format": (
-                        '#,##0.00;[Red]-#,##0.00'
-                    )
-                }
+                {"num_format": ("#,##0.00;[Red]-#,##0.00")}
             )
 
             formato_texto = libro.add_format(
@@ -571,9 +461,7 @@ def guardar_resultado_excel(
                 }
             )
 
-            hoja_saldos = writer.sheets[
-                "SALDOS_BRUTOS"
-            ]
+            hoja_saldos = writer.sheets["SALDOS_BRUTOS"]
 
             hoja_saldos.freeze_panes(
                 1,
@@ -604,9 +492,7 @@ def guardar_resultado_excel(
                 formato_monetario,
             )
 
-            hoja_resumen = writer.sheets[
-                "RESUMEN"
-            ]
+            hoja_resumen = writer.sheets["RESUMEN"]
 
             hoja_resumen.set_column(
                 "A:A",
@@ -618,9 +504,7 @@ def guardar_resultado_excel(
                 25,
             )
 
-            hoja_duplicados = writer.sheets[
-                "CLAVES_REPETIDAS"
-            ]
+            hoja_duplicados = writer.sheets["CLAVES_REPETIDAS"]
 
             hoja_duplicados.freeze_panes(
                 1,
@@ -652,16 +536,10 @@ def guardar_resultado_excel(
         ) from error
 
     if not ruta_salida.exists():
-        raise ErrorConsultaNacional(
-            "No se creó el archivo local "
-            "de resultados."
-        )
+        raise ErrorConsultaNacional("No se creó el archivo local " "de resultados.")
 
     if ruta_salida.stat().st_size == 0:
-        raise ErrorConsultaNacional(
-            "El archivo local de resultados "
-            "quedó vacío."
-        )
+        raise ErrorConsultaNacional("El archivo local de resultados " "quedó vacío.")
 
     return ruta_salida
 
@@ -679,17 +557,11 @@ def main():
     try:
         argumentos = leer_argumentos()
 
-        configuracion = cargar_configuracion(
-            str(RUTA_CONFIGURACION)
-        )
+        configuracion = cargar_configuracion(str(RUTA_CONFIGURACION))
 
-        validar_modo_seguro(
-            configuracion
-        )
+        validar_modo_seguro(configuracion)
 
-        rutas = validar_carpetas(
-            configuracion
-        )
+        rutas = validar_carpetas(configuracion)
 
         parametros = crear_parametros(
             anio=argumentos.anio,
@@ -713,9 +585,7 @@ def main():
             )
         )
 
-        controlador = validar_dsn(
-            nombre_dsn
-        )
+        controlador = validar_dsn(nombre_dsn)
 
         consulta = construir_consulta_saldos(
             anio=parametros.anio,
@@ -730,16 +600,9 @@ def main():
         print(f"DSN: {nombre_dsn}")
         print(f"Controlador: {controlador}")
         print()
-        print(
-            "La consulta es de solo lectura."
-        )
-        print(
-            "El resultado se guardará únicamente "
-            "en una carpeta local de pruebas."
-        )
-        print(
-            "No se publicará información en la red."
-        )
+        print("La consulta es de solo lectura.")
+        print("El resultado se guardará únicamente " "en una carpeta local de pruebas.")
+        print("No se publicará información en la red.")
 
         usuario, clave = solicitar_credenciales()
 
@@ -767,14 +630,9 @@ def main():
             consulta=consulta,
         )
 
-        duracion = (
-            time.perf_counter()
-            - inicio
-        )
+        duracion = time.perf_counter() - inicio
 
-        saldos = normalizar_resultado(
-            saldos_brutos
-        )
+        saldos = normalizar_resultado(saldos_brutos)
 
         resumen, duplicados = construir_diagnostico(
             saldos=saldos,
@@ -782,9 +640,7 @@ def main():
             duracion_segundos=duracion,
         )
 
-        carpeta_salida = Path(
-            rutas["datos_prueba"]
-        )
+        carpeta_salida = Path(rutas["datos_prueba"])
 
         ruta_sql = guardar_consulta_sql(
             consulta=consulta,
@@ -804,9 +660,7 @@ def main():
         print("=" * 70)
         print("CONSULTA TERMINADA CORRECTAMENTE")
         print("=" * 70)
-        print(
-            f"Registros recibidos: {len(saldos):,}"
-        )
+        print(f"Registros recibidos: {len(saldos):,}")
         print(
             "Contabilidades únicas:",
             saldos["CONTABILIDAD"].nunique(),
@@ -834,10 +688,7 @@ def main():
         print("Consulta SQL ejecutada:")
         print(ruta_sql)
         print()
-        print(
-            "No se escribieron archivos "
-            "en carpetas corporativas."
-        )
+        print("No se escribieron archivos " "en carpetas corporativas.")
         print("=" * 70)
 
         return 0
@@ -859,9 +710,7 @@ def main():
 
     except KeyboardInterrupt:
         print()
-        print(
-            "Consulta cancelada por el usuario."
-        )
+        print("Consulta cancelada por el usuario.")
 
         return 2
 
@@ -880,12 +729,8 @@ def main():
         print("=" * 70)
         print("ERROR NO CONTROLADO")
         print("=" * 70)
-        print(
-            f"Tipo: {type(error).__name__}"
-        )
-        print(
-            f"Detalle: {error}"
-        )
+        print(f"Tipo: {type(error).__name__}")
+        print(f"Detalle: {error}")
         print()
         traceback.print_exc()
         print("=" * 70)
@@ -897,9 +742,7 @@ def main():
             conexion.close()
 
             print()
-            print(
-                "Conexión cerrada correctamente."
-            )
+            print("Conexión cerrada correctamente.")
 
         usuario = None
         clave = None

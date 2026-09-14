@@ -23,9 +23,7 @@ def validar_archivo(
 
     if extensiones_permitidas:
         extensiones = {
-            extension.lower()
-            if extension.startswith(".")
-            else f".{extension.lower()}"
+            extension.lower() if extension.startswith(".") else f".{extension.lower()}"
             for extension in extensiones_permitidas
         }
 
@@ -54,15 +52,9 @@ def validar_columnas(
     """
     Comprueba que un DataFrame contenga las columnas requeridas.
     """
-    actuales = {
-        str(columna).strip()
-        for columna in columnas_actuales
-    }
+    actuales = {str(columna).strip() for columna in columnas_actuales}
 
-    requeridas = {
-        str(columna).strip()
-        for columna in columnas_requeridas
-    }
+    requeridas = {str(columna).strip() for columna in columnas_requeridas}
 
     faltantes = sorted(requeridas - actuales)
 
@@ -81,6 +73,4 @@ def validar_dataframe_no_vacio(
     Comprueba que una fuente haya producido al menos una fila.
     """
     if cantidad_filas <= 0:
-        raise ErrorValidacion(
-            f"La fuente '{nombre_fuente}' no contiene registros."
-        )
+        raise ErrorValidacion(f"La fuente '{nombre_fuente}' no contiene registros.")

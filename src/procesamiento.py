@@ -9,7 +9,6 @@ from src.validaciones import (
     validar_dataframe_no_vacio,
 )
 
-
 COLUMNAS_NEGOCIOS = [
     "No. de Radicación del Negocio Fiduciario",
     "Código contable",
@@ -71,32 +70,23 @@ def preparar_fuente_negocios(
 
     resultado = dataframe[COLUMNAS_NEGOCIOS].copy()
 
-    resultado["No. de Radicación del Negocio Fiduciario"] = (
-        resultado["No. de Radicación del Negocio Fiduciario"]
-        .apply(normalizar_identificador)
-    )
+    resultado["No. de Radicación del Negocio Fiduciario"] = resultado[
+        "No. de Radicación del Negocio Fiduciario"
+    ].apply(normalizar_identificador)
 
-    resultado["Código contable"] = (
-        resultado["Código contable"]
-        .apply(normalizar_identificador)
+    resultado["Código contable"] = resultado["Código contable"].apply(
+        normalizar_identificador
     )
 
     resultado["Nombre del Fideicomiso"] = (
-        resultado["Nombre del Fideicomiso"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
+        resultado["Nombre del Fideicomiso"].fillna("").astype(str).str.strip()
     )
 
     # Se eliminan únicamente las filas que no permiten identificar
     # ni el número Super ni el código contable.
     resultado = resultado[
-        (
-            resultado["No. de Radicación del Negocio Fiduciario"] != ""
-        )
-        & (
-            resultado["Código contable"] != ""
-        )
+        (resultado["No. de Radicación del Negocio Fiduciario"] != "")
+        & (resultado["Código contable"] != "")
     ].copy()
 
     validar_dataframe_no_vacio(
@@ -127,34 +117,22 @@ def preparar_formato_351(
 
     resultado = formato_351[columnas_requeridas].copy()
 
-    resultado["Cta_Con351"] = (
-        resultado["Cta_Con351"]
-        .apply(normalizar_identificador)
-    )
+    resultado["Cta_Con351"] = resultado["Cta_Con351"].apply(normalizar_identificador)
 
-    resultado["No. Sup351"] = (
-        resultado["No. Sup351"]
-        .apply(normalizar_identificador)
-    )
+    resultado["No. Sup351"] = resultado["No. Sup351"].apply(normalizar_identificador)
 
     resultado["Valor_351"] = pd.to_numeric(
         resultado["Valor_351"],
         errors="coerce",
     ).fillna(0)
 
-    resultado = resultado[
-        resultado["Cta_Con351"].str.startswith("13")
-    ].copy()
+    resultado = resultado[resultado["Cta_Con351"].str.startswith("13")].copy()
 
-    resultado = (
-        resultado
-        .groupby(
-            ["Cta_Con351", "No. Sup351"],
-            as_index=False,
-            dropna=False,
-        )["Valor_351"]
-        .sum()
-    )
+    resultado = resultado.groupby(
+        ["Cta_Con351", "No. Sup351"],
+        as_index=False,
+        dropna=False,
+    )["Valor_351"].sum()
 
     validar_dataframe_no_vacio(
         len(resultado),
@@ -207,11 +185,7 @@ def construir_base_negocios(
     duplicados_eliminados = filas_antes - len(base_completa)
 
     base_completa = base_completa.rename(
-        columns={
-            "No. de Radicación del Negocio Fiduciario": (
-                "Nro. Super"
-            )
-        }
+        columns={"No. de Radicación del Negocio Fiduciario": ("Nro. Super")}
     )
 
     base_completa = base_completa[
@@ -279,9 +253,7 @@ def preparar_insumos(
     """
     Ejecuta toda la preparación de los insumos.
     """
-    formato_351 = preparar_formato_351(
-        insumos.formato_351
-    )
+    formato_351 = preparar_formato_351(insumos.formato_351)
 
     (
         base_negocios,
@@ -292,14 +264,12 @@ def preparar_insumos(
         centros_costos=insumos.centros_costos,
     )
 
-    cuentas_transmision = obtener_cuentas_transmision(
-        formato_351
-    )
+    cuentas_transmision = obtener_cuentas_transmision(formato_351)
 
     return ResultadoPreparacion(
-    base_negocios=base_negocios,
-    cuentas_transmision=cuentas_transmision,
-    formato_351=formato_351,
-    filas_antes_duplicados=filas_antes,
-    duplicados_eliminados=duplicados_eliminados,
-)
+        base_negocios=base_negocios,
+        cuentas_transmision=cuentas_transmision,
+        formato_351=formato_351,
+        filas_antes_duplicados=filas_antes,
+        duplicados_eliminados=duplicados_eliminados,
+    )

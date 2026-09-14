@@ -15,14 +15,10 @@ def validar_dataframe(
 ):
 
     if dataframe is None:
-        raise ErrorGeneradorSaldos(
-            f"{nombre} no existe."
-        )
+        raise ErrorGeneradorSaldos(f"{nombre} no existe.")
 
     if dataframe.empty:
-        raise ErrorGeneradorSaldos(
-            f"{nombre} está vacío."
-        )
+        raise ErrorGeneradorSaldos(f"{nombre} está vacío.")
 
 
 def aplicar_formato_excel(
@@ -34,18 +30,10 @@ def aplicar_formato_excel(
     workbook = writer.book
     worksheet = writer.sheets[hoja_nombre]
 
-    formato_texto = workbook.add_format(
-        {
-            "align": "left"
-        }
-    )
+    formato_texto = workbook.add_format({"align": "left"})
 
     formato_numero = workbook.add_format(
-        {
-            "num_format":
-            "#,##0.00;[Red]-#,##0.00",
-            "align": "right"
-        }
+        {"num_format": "#,##0.00;[Red]-#,##0.00", "align": "right"}
     )
 
     formato_encabezado = workbook.add_format(
@@ -61,9 +49,7 @@ def aplicar_formato_excel(
     worksheet.freeze_panes(1, 0)
     worksheet.hide_gridlines(2)
 
-    for columna_idx, columna in enumerate(
-        dataframe.columns
-    ):
+    for columna_idx, columna in enumerate(dataframe.columns):
 
         worksheet.write(
             0,
@@ -72,10 +58,7 @@ def aplicar_formato_excel(
             formato_encabezado,
         )
 
-        ancho = max(
-            18,
-            len(str(columna)) + 5
-        )
+        ancho = max(18, len(str(columna)) + 5)
 
         if dataframe[columna].dtype == object:
 
@@ -102,10 +85,7 @@ def aplicar_formato_excel(
         len(dataframe.columns) - 1,
         {
             "style": "Table Style Medium 1",
-            "columns": [
-                {"header": c}
-                for c in dataframe.columns
-            ],
+            "columns": [{"header": c} for c in dataframe.columns],
         },
     )
 
@@ -125,19 +105,14 @@ def generar_saldos_inversiones(
         "BASENEG",
     )
 
-    carpeta_salida = Path(
-        carpeta_salida
-    )
+    carpeta_salida = Path(carpeta_salida)
 
     carpeta_salida.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    ruta_archivo = (
-        carpeta_salida
-        / "Saldos_Inversiones.xlsx"
-    )
+    ruta_archivo = carpeta_salida / "Saldos_Inversiones.xlsx"
 
     try:
 
@@ -172,26 +147,18 @@ def generar_saldos_inversiones(
 
     except PermissionError as error:
 
-        raise ErrorGeneradorSaldos(
-            "El archivo está abierto."
-        ) from error
+        raise ErrorGeneradorSaldos("El archivo está abierto.") from error
 
     except Exception as error:
 
-        raise ErrorGeneradorSaldos(
-            f"Error generando archivo: {error}"
-        ) from error
+        raise ErrorGeneradorSaldos(f"Error generando archivo: {error}") from error
 
     if not ruta_archivo.exists():
 
-        raise ErrorGeneradorSaldos(
-            "No se generó el archivo."
-        )
+        raise ErrorGeneradorSaldos("No se generó el archivo.")
 
     if ruta_archivo.stat().st_size == 0:
 
-        raise ErrorGeneradorSaldos(
-            "El archivo quedó vacío."
-        )
+        raise ErrorGeneradorSaldos("El archivo quedó vacío.")
 
     return ruta_archivo

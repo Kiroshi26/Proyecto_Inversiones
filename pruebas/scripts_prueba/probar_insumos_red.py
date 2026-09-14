@@ -14,15 +14,9 @@ from src.insumos_red import (
     preparar_insumos_desde_red,
 )
 
+CARPETA_PROYECTO = Path(__file__).resolve().parent
 
-CARPETA_PROYECTO = Path(
-    __file__
-).resolve().parent
-
-RUTA_CONFIGURACION = (
-    CARPETA_PROYECTO
-    / "config.yaml"
-)
+RUTA_CONFIGURACION = CARPETA_PROYECTO / "config.yaml"
 
 
 def mostrar_archivo(
@@ -59,31 +53,17 @@ def main():
         print("PRUEBA DE INSUMOS DESDE LA RED")
         print("=" * 70)
         print()
-        print(
-            "Esta prueba solo leerá archivos corporativos."
-        )
-        print(
-            "Todas las copias y resultados serán locales."
-        )
-        print(
-            "No se publicarán archivos en la red."
-        )
+        print("Esta prueba solo leerá archivos corporativos.")
+        print("Todas las copias y resultados serán locales.")
+        print("No se publicarán archivos en la red.")
 
-        configuracion = cargar_configuracion(
-            str(RUTA_CONFIGURACION)
-        )
+        configuracion = cargar_configuracion(str(RUTA_CONFIGURACION))
 
-        validar_modo_seguro(
-            configuracion
-        )
+        validar_modo_seguro(configuracion)
 
-        rutas_locales = validar_carpetas(
-            configuracion
-        )
+        rutas_locales = validar_carpetas(configuracion)
 
-        rutas_red = validar_configuracion_red(
-            configuracion
-        )
+        rutas_red = validar_configuracion_red(configuracion)
 
         fecha_corte = date(
             2025,
@@ -94,9 +74,7 @@ def main():
         ejecucion = preparar_insumos_desde_red(
             configuracion=configuracion,
             rutas_red=rutas_red,
-            carpeta_ejecuciones=rutas_locales[
-                "ejecuciones"
-            ],
+            carpeta_ejecuciones=rutas_locales["ejecuciones"],
             fecha_corte=fecha_corte,
         )
 
@@ -130,10 +108,7 @@ def main():
         print("=" * 70)
         print("PRUEBA TERMINADA CORRECTAMENTE")
         print("=" * 70)
-        print(
-            "No se escribieron resultados "
-            "en carpetas corporativas."
-        )
+        print("No se escribieron resultados " "en carpetas corporativas.")
 
         return 0
 
@@ -155,9 +130,7 @@ def main():
         print("=" * 70)
         print("ERROR NO CONTROLADO")
         print("=" * 70)
-        print(
-            f"{type(error).__name__}: {error}"
-        )
+        print(f"{type(error).__name__}: {error}")
         print("=" * 70)
 
         return 2

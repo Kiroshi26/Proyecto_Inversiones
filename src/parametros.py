@@ -2,7 +2,6 @@ import calendar
 from dataclasses import dataclass
 from datetime import date
 
-
 MESES = {
     1: ("ENE", "ENERO"),
     2: ("FEB", "FEBRERO"),
@@ -48,9 +47,7 @@ def crear_parametros(anio: int, mes: int) -> ParametrosProceso:
         )
 
     if mes not in MESES:
-        raise ErrorParametros(
-            f"El mes {mes} no es válido. Debe estar entre 1 y 12."
-        )
+        raise ErrorParametros(f"El mes {mes} no es válido. Debe estar entre 1 y 12.")
 
     mes_anterior = 12 if mes == 1 else mes - 1
     mes_siguiente = 1 if mes == 12 else mes + 1

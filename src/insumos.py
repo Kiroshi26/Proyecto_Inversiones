@@ -25,30 +25,28 @@ def construir_rutas_insumos(
     """
     Construye las rutas locales de los insumos de prueba.
     """
-    carpeta_insumos = Path(
-        configuracion["rutas"]["insumos_prueba"]
-    )
+    carpeta_insumos = Path(configuracion["rutas"]["insumos_prueba"])
 
     archivos = configuracion["archivos"]
 
     return {
         "formato_351": carpeta_insumos / archivos["formato_351"],
-        "mapas_contables": (
-            carpeta_insumos / archivos["mapas_contables"]
-        ),
-        "mapas_centros_costos": (
-            carpeta_insumos / archivos["mapas_centros_costos"]
-        ),
+        "mapas_contables": (carpeta_insumos / archivos["mapas_contables"]),
+        "mapas_centros_costos": (carpeta_insumos / archivos["mapas_centros_costos"]),
     }
 
 
 def validar_insumos_disponibles(
     configuracion: Dict[str, Any],
+    rutas_insumos: Dict[str, Path] = None,
 ) -> Dict[str, Path]:
     """
     Comprueba que existan los tres archivos requeridos.
     """
-    rutas = construir_rutas_insumos(configuracion)
+    if rutas_insumos is None:
+        rutas = construir_rutas_insumos(configuracion)
+    else:
+        rutas = rutas_insumos
 
     validar_archivo(
         rutas["formato_351"],
@@ -97,18 +95,14 @@ def cargar_formato_351(
 
     dataframe = dataframe.rename(
         columns={
-            "2 - Código Catalogo Único de Informción Financiera": (
-                "Cta_Con351"
-            ),
+            "2 - Código Catalogo Único de Informción Financiera": ("Cta_Con351"),
             "77 - Código del fideicomiso": "No. Sup351",
             "30 - Vr. razonable o valor presente en $": "Valor_351",
         }
     )
 
     dataframe = dataframe[
-        dataframe["Cta_Con351"]
-        .astype(str)
-        .str.startswith("13")
+        dataframe["Cta_Con351"].astype(str).str.startswith("13")
     ].copy()
 
     dataframe["Valor_351"] = pd.to_numeric(
@@ -116,15 +110,11 @@ def cargar_formato_351(
         errors="coerce",
     ).fillna(0)
 
-    dataframe = (
-        dataframe
-        .groupby(
-            ["Cta_Con351", "No. Sup351"],
-            dropna=False,
-            as_index=False,
-        )["Valor_351"]
-        .sum()
-    )
+    dataframe = dataframe.groupby(
+        ["Cta_Con351", "No. Sup351"],
+        dropna=False,
+        as_index=False,
+    )["Valor_351"].sum()
 
     validar_dataframe_no_vacio(
         len(dataframe),
@@ -180,11 +170,12 @@ def cargar_centros_costos(
 
 def cargar_insumos(
     configuracion: Dict[str, Any],
+    rutas_insumos: Dict[str, Path] = None,
 ) -> InsumosProceso:
     """
     Valida y carga todos los insumos de Excel.
     """
-    rutas = validar_insumos_disponibles(configuracion)
+    rutas = validar_insumos_disponibles(configuracion, rutas_insumos)
     hojas = configuracion["hojas"]
 
     formato_351 = cargar_formato_351(

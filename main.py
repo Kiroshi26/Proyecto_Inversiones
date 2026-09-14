@@ -48,13 +48,9 @@ def solicitar_periodo():
     print("PERIODO DE PROCESO")
     print("=" * 70)
 
-    anio = int(
-        input("Año: ")
-    )
+    anio = int(input("Año: "))
 
-    mes = int(
-        input("Mes (1-12): ")
-    )
+    mes = int(input("Mes (1-12): "))
 
     return anio, mes
 
@@ -68,25 +64,13 @@ def mostrar_resultado(resultado):
 
     print()
 
-    print(
-        f"Archivo generado : "
-        f"{resultado.ruta_archivo}"
-    )
+    print(f"Archivo generado : " f"{resultado.ruta_archivo}")
 
-    print(
-        f"Registros SALDOS : "
-        f"{resultado.cantidad_saldos:,}"
-    )
+    print(f"Registros SALDOS : " f"{resultado.cantidad_saldos:,}")
 
-    print(
-        f"Registros BASENEG : "
-        f"{resultado.cantidad_baseneg:,}"
-    )
+    print(f"Registros BASENEG : " f"{resultado.cantidad_baseneg:,}")
 
-    print(
-        f"TOTAL MES : "
-        f"{resultado.total_mes:,.2f}"
-    )
+    print(f"TOTAL MES : " f"{resultado.total_mes:,.2f}")
 
     print()
     print("=" * 70)
@@ -107,9 +91,7 @@ def main():
         #
         # Periodo
         #
-        anio, mes = (
-            solicitar_periodo()
-        )
+        anio, mes = solicitar_periodo()
 
         parametros = crear_parametros(
             anio=anio,
@@ -119,36 +101,20 @@ def main():
         #
         # Configuración
         #
-        configuracion = (
-            cargar_configuracion()
-        )
+        configuracion = cargar_configuracion()
 
-        validar_modo_seguro(
-            configuracion
-        )
+        validar_modo_seguro(configuracion)
 
-        rutas_locales = (
-            validar_carpetas(
-                configuracion
-            )
-        )
+        rutas_locales = validar_carpetas(configuracion)
 
-        rutas_red = (
-            validar_configuracion_red(
-                configuracion
-            )
-        )
+        rutas_red = validar_configuracion_red(configuracion)
 
         #
         # Log
         #
-        logger = configurar_logger(
-            rutas_locales["logs"]
-        )
+        logger = configurar_logger(rutas_locales["logs"])
 
-        logger.info(
-            "Inicio proceso."
-        )
+        logger.info("Inicio proceso.")
 
         logger.info(
             "Periodo: %s",
@@ -159,23 +125,13 @@ def main():
         # Copia insumos corporativos
         #
         print()
-        print(
-            "Copiando insumos..."
-        )
+        print("Copiando insumos...")
 
-        ejecucion = (
-            preparar_insumos_desde_red(
-                configuracion=configuracion,
-                rutas_red=rutas_red,
-                carpeta_ejecuciones=(
-                    rutas_locales[
-                        "ejecuciones"
-                    ]
-                ),
-                fecha_corte=(
-                    parametros.fecha_corte
-                ),
-            )
+        ejecucion = preparar_insumos_desde_red(
+            configuracion=configuracion,
+            rutas_red=rutas_red,
+            carpeta_ejecuciones=(rutas_locales["ejecuciones"]),
+            fecha_corte=(parametros.fecha_corte),
         )
 
         logger.info(
@@ -183,67 +139,51 @@ def main():
             ejecucion.carpeta_ejecucion,
         )
 
-        print(
-            "Insumos copiados correctamente."
-        )
+        print("Insumos copiados correctamente.")
 
         #
         # Lectura insumos
         #
         print()
-        print(
-            "Leyendo insumos..."
-        )
+        print("Leyendo insumos...")
 
-        insumos = cargar_insumos(
-            configuracion
-        )
+        rutas_descargadas = {
+            "formato_351": ejecucion.formato_351.ruta_destino,
+            "mapas_contables": ejecucion.mapas_contables.ruta_destino,
+            "mapas_centros_costos": ejecucion.mapas_centros_costos.ruta_destino,
+        }
 
-        resultado_preparacion = (
-            preparar_insumos(
-                insumos
-            )
-        )
+        insumos = cargar_insumos(configuracion, rutas_descargadas)
+
+        resultado_preparacion = preparar_insumos(insumos)
 
         logger.info(
             "Base negocios: %s registros",
-            len(
-                resultado_preparacion.base_negocios
-            ),
+            len(resultado_preparacion.base_negocios),
         )
 
         logger.info(
             "Formato 351: %s registros",
-            len(
-                resultado_preparacion.formato_351
-            ),
+            len(resultado_preparacion.formato_351),
         )
 
         #
         # Credenciales Nacional
         #
-        usuario, clave = (
-            solicitar_credenciales()
-        )
+        usuario, clave = solicitar_credenciales()
 
         #
         # Proceso principal
         #
         print()
-        print(
-            "Consultando Nacional..."
-        )
+        print("Consultando Nacional...")
 
-        resultado = (
-            ejecutar_proceso_inversiones(
-                configuracion=configuracion,
-                parametros=parametros,
-                resultado_preparacion=(
-                    resultado_preparacion
-                ),
-                usuario=usuario,
-                clave=clave,
-            )
+        resultado = ejecutar_proceso_inversiones(
+            configuracion=configuracion,
+            parametros=parametros,
+            resultado_preparacion=(resultado_preparacion),
+            usuario=usuario,
+            clave=clave,
         )
 
         logger.info(
@@ -251,9 +191,7 @@ def main():
             resultado.ruta_archivo,
         )
 
-        mostrar_resultado(
-            resultado
-        )
+        mostrar_resultado(resultado)
 
         return 0
 
@@ -261,9 +199,7 @@ def main():
 
         if logger is not None:
 
-            logger.exception(
-                "Error del proceso."
-            )
+            logger.exception("Error del proceso.")
 
         print()
         print("=" * 70)
@@ -271,10 +207,7 @@ def main():
         print("=" * 70)
         print()
 
-        print(
-            f"{type(error).__name__}: "
-            f"{error}"
-        )
+        print(f"{type(error).__name__}: " f"{error}")
 
         print()
         traceback.print_exc()
@@ -284,6 +217,4 @@ def main():
 
 if __name__ == "__main__":
 
-    raise SystemExit(
-        main()
-    )
+    raise SystemExit(main())

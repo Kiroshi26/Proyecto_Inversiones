@@ -34,24 +34,11 @@ def consultar_nacional(
     clave: str,
 ):
 
-    configuracion_bd = (
-        configuracion.get(
-            "base_datos",
-            {}
-        )
-    )
+    configuracion_bd = configuracion.get("base_datos", {})
 
-    dsn = configuracion_bd.get(
-        "dsn",
-        "NACIONALET01"
-    )
+    dsn = configuracion_bd.get("dsn", "NACIONALET01")
 
-    timeout = int(
-        configuracion_bd.get(
-            "timeout_segundos",
-            120
-        )
-    )
+    timeout = int(configuracion_bd.get("timeout_segundos", 120))
 
     sql = construir_consulta_saldos(
         anio=parametros.anio,
@@ -82,23 +69,13 @@ def ejecutar_proceso_inversiones(
         clave=clave,
     )
 
-    resultado_conciliacion = (
-        ejecutar_conciliacion(
-            saldos_nacional=saldos_nacional,
-            base_negocios=(
-                resultado_preparacion.base_negocios
-            ),
-            formato_351=(
-                resultado_preparacion.formato_351
-            ),
-        )
+    resultado_conciliacion = ejecutar_conciliacion(
+        saldos_nacional=saldos_nacional,
+        base_negocios=(resultado_preparacion.base_negocios),
+        formato_351=(resultado_preparacion.formato_351),
     )
 
-    carpeta_salida = Path(
-        configuracion["rutas"][
-            "datos_prueba"
-        ]
-    )
+    carpeta_salida = Path(configuracion["rutas"]["datos_prueba"])
 
     ruta_archivo = generar_saldos_inversiones(
         resultado=resultado_conciliacion,
@@ -107,15 +84,7 @@ def ejecutar_proceso_inversiones(
 
     return ResultadoProcesoInversiones(
         ruta_archivo=ruta_archivo,
-        cantidad_saldos=len(
-            resultado_conciliacion.saldos
-        ),
-        cantidad_baseneg=len(
-            resultado_conciliacion.baseneg
-        ),
-        total_mes=float(
-            resultado_conciliacion.saldos[
-                "TOTAL_MES"
-            ].sum()
-        ),
+        cantidad_saldos=len(resultado_conciliacion.saldos),
+        cantidad_baseneg=len(resultado_conciliacion.baseneg),
+        total_mes=float(resultado_conciliacion.saldos["TOTAL_MES"].sum()),
     )

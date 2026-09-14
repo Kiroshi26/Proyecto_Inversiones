@@ -35,20 +35,16 @@ def cargar_configuracion(
             "r",
             encoding="utf-8",
         ) as archivo:
-            configuracion = yaml.safe_load(
-                archivo
-            )
+            configuracion = yaml.safe_load(archivo)
 
     except yaml.YAMLError as error:
         raise ErrorConfiguracion(
-            "El archivo config.yaml no es valido: "
-            f"{error}"
+            "El archivo config.yaml no es valido: " f"{error}"
         ) from error
 
     except OSError as error:
         raise ErrorConfiguracion(
-            "No fue posible leer config.yaml: "
-            f"{error}"
+            "No fue posible leer config.yaml: " f"{error}"
         ) from error
 
     if not isinstance(
@@ -91,14 +87,11 @@ def validar_carpetas(
     rutas_validadas: Dict[str, Path] = {}
 
     for nombre in nombres_requeridos:
-        valor = rutas_configuracion.get(
-            nombre
-        )
+        valor = rutas_configuracion.get(nombre)
 
         if not valor:
             raise ErrorConfiguracion(
-                f"Falta configurar la ruta '{nombre}' "
-                "en config.yaml."
+                f"Falta configurar la ruta '{nombre}' " "en config.yaml."
             )
 
         ruta = Path(valor)
@@ -111,8 +104,7 @@ def validar_carpetas(
 
         except OSError as error:
             raise ErrorConfiguracion(
-                "No fue posible crear o acceder "
-                f"a la carpeta local {ruta}: {error}"
+                "No fue posible crear o acceder " f"a la carpeta local {ruta}: {error}"
             ) from error
 
         rutas_validadas[nombre] = ruta
@@ -132,12 +124,16 @@ def validar_modo_seguro(
         {},
     )
 
-    modo = str(
-        proyecto.get(
-            "modo",
-            "",
+    modo = (
+        str(
+            proyecto.get(
+                "modo",
+                "",
+            )
         )
-    ).strip().lower()
+        .strip()
+        .lower()
+    )
 
     publicar = bool(
         proyecto.get(
@@ -182,14 +178,11 @@ def validar_configuracion_red(
     rutas_validadas: Dict[str, Path] = {}
 
     for clave in claves_requeridas:
-        valor = rutas_red.get(
-            clave
-        )
+        valor = rutas_red.get(clave)
 
         if not valor:
             raise ErrorConfiguracion(
-                "Falta configurar la ruta corporativa "
-                f"'rutas_red.{clave}'."
+                "Falta configurar la ruta corporativa " f"'rutas_red.{clave}'."
             )
 
         ruta = Path(valor)
@@ -202,8 +195,7 @@ def validar_configuracion_red(
 
         if not ruta.is_dir():
             raise ErrorConfiguracion(
-                "La ruta corporativa no corresponde "
-                f"a una carpeta: {ruta}"
+                "La ruta corporativa no corresponde " f"a una carpeta: {ruta}"
             )
 
         rutas_validadas[clave] = ruta

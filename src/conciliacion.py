@@ -43,20 +43,11 @@ def preparar_saldos_nacional(
 
     df = saldos_nacional.copy()
 
-    df["CONTABILIDAD"] = (
-        df["CONTABILIDAD"]
-        .apply(normalizar_texto)
-    )
+    df["CONTABILIDAD"] = df["CONTABILIDAD"].apply(normalizar_texto)
 
-    df["CUENTA"] = (
-        df["CUENTA"]
-        .apply(normalizar_texto)
-    )
+    df["CUENTA"] = df["CUENTA"].apply(normalizar_texto)
 
-    df["CTA_6DG"] = (
-        df["CUENTA"]
-        .str[:6]
-    )
+    df["CTA_6DG"] = df["CUENTA"].str[:6]
 
     return df
 
@@ -71,11 +62,7 @@ def construir_baseneg(
         "Nombre del Fideicomiso",
     ]
 
-    resultado = (
-        base_negocios[columnas]
-        .drop_duplicates()
-        .copy()
-    )
+    resultado = base_negocios[columnas].drop_duplicates().copy()
 
     resultado.sort_values(
         by=[
@@ -109,21 +96,17 @@ def agrupar_por_super_y_cta(
     dataframe: pd.DataFrame,
 ) -> pd.DataFrame:
 
-    agrupado = (
-        dataframe
-        .groupby(
-            [
-                "Nro. Super",
-                "CTA_6DG",
-            ],
-            as_index=False,
-            dropna=False,
-        )
-        .agg(
-            TOTAL_MES=(
-                "TOTAL_MES",
-                "sum",
-            )
+    agrupado = dataframe.groupby(
+        [
+            "Nro. Super",
+            "CTA_6DG",
+        ],
+        as_index=False,
+        dropna=False,
+    ).agg(
+        TOTAL_MES=(
+            "TOTAL_MES",
+            "sum",
         )
     )
 
@@ -135,18 +118,15 @@ def recuperar_informacion_negocio(
     base_negocios: pd.DataFrame,
 ) -> pd.DataFrame:
 
-    informacion = (
-        base_negocios[
-            [
-                "Nro. Super",
-                "Código contable",
-                "Nombre del Fideicomiso",
-            ]
+    informacion = base_negocios[
+        [
+            "Nro. Super",
+            "Código contable",
+            "Nombre del Fideicomiso",
         ]
-        .drop_duplicates(
-            subset=["Nro. Super"],
-            keep="first",
-        )
+    ].drop_duplicates(
+        subset=["Nro. Super"],
+        keep="first",
     )
 
     resultado = agrupado.merge(
@@ -165,27 +145,15 @@ def cruzar_formato_351(
 
     trabajo = dataframe.copy()
 
-    trabajo["Nro. Super"] = (
-        trabajo["Nro. Super"]
-        .apply(normalizar_texto)
-    )
+    trabajo["Nro. Super"] = trabajo["Nro. Super"].apply(normalizar_texto)
 
-    trabajo["CTA_6DG"] = (
-        trabajo["CTA_6DG"]
-        .apply(normalizar_texto)
-    )
+    trabajo["CTA_6DG"] = trabajo["CTA_6DG"].apply(normalizar_texto)
 
     formato = formato_351.copy()
 
-    formato["No. Sup351"] = (
-        formato["No. Sup351"]
-        .apply(normalizar_texto)
-    )
+    formato["No. Sup351"] = formato["No. Sup351"].apply(normalizar_texto)
 
-    formato["Cta_Con351"] = (
-        formato["Cta_Con351"]
-        .apply(normalizar_texto)
-    )
+    formato["Cta_Con351"] = formato["Cta_Con351"].apply(normalizar_texto)
 
     resultado = trabajo.merge(
         formato,
@@ -200,18 +168,12 @@ def cruzar_formato_351(
         how="left",
     )
 
-    resultado["Valor_351"] = (
-        pd.to_numeric(
-            resultado["Valor_351"],
-            errors="coerce",
-        )
-        .fillna(0)
-    )
+    resultado["Valor_351"] = pd.to_numeric(
+        resultado["Valor_351"],
+        errors="coerce",
+    ).fillna(0)
 
-    resultado["DIFERENCIA"] = (
-        resultado["TOTAL_MES"]
-        - resultado["Valor_351"]
-    )
+    resultado["DIFERENCIA"] = resultado["TOTAL_MES"] - resultado["Valor_351"]
 
     resultado.drop(
         columns=[
@@ -269,22 +231,16 @@ def ejecutar_conciliacion(
 ) -> ResultadoConciliacion:
 
     if saldos_nacional.empty:
-        raise ErrorConciliacion(
-            "No existen registros de Nacional."
-        )
+        raise ErrorConciliacion("No existen registros de Nacional.")
 
-    nacional = preparar_saldos_nacional(
-        saldos_nacional
-    )
+    nacional = preparar_saldos_nacional(saldos_nacional)
 
     nacional = cruzar_base_negocios(
         nacional,
         base_negocios,
     )
 
-    agrupado = agrupar_por_super_y_cta(
-        nacional
-    )
+    agrupado = agrupar_por_super_y_cta(nacional)
 
     agrupado = recuperar_informacion_negocio(
         agrupado,
@@ -296,13 +252,9 @@ def ejecutar_conciliacion(
         formato_351,
     )
 
-    saldos = construir_saldos_final(
-        agrupado
-    )
+    saldos = construir_saldos_final(agrupado)
 
-    baseneg = construir_baseneg(
-        base_negocios
-    )
+    baseneg = construir_baseneg(base_negocios)
 
     return ResultadoConciliacion(
         saldos=saldos,
