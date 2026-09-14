@@ -1,57 +1,89 @@
-from src.configuracion import cargar_configuracion
-from src.insumos import cargar_insumos
-from src.procesamiento import preparar_insumos
+from datetime import date
+
+from src.configuracion import (
+    cargar_configuracion,
+    validar_carpetas,
+    validar_configuracion_red,
+)
+
+from src.insumos_red import (
+    preparar_insumos_desde_red,
+)
 
 print("Cargando configuración...")
 
 config = cargar_configuracion()
 
-print("Leyendo insumos...")
+print("Validando carpetas...")
 
-insumos = cargar_insumos(config)
+rutas_locales = validar_carpetas(
+    config
+)
 
-print("Preparando insumos...")
+rutas_red = validar_configuracion_red(
+    config
+)
 
-resultado = preparar_insumos(insumos)
+print("Copiando insumos desde red...")
+
+resultado = preparar_insumos_desde_red(
+    configuracion=config,
+    rutas_red=rutas_red,
+    carpeta_ejecuciones=rutas_locales[
+        "ejecuciones"
+    ],
+    fecha_corte=date(
+        2025,
+        12,
+        31,
+    ),
+)
 
 print()
 print("=" * 70)
-
-print("BASE NEGOCIOS")
-
+print("COPIA FINALIZADA")
 print("=" * 70)
 
-print(resultado.base_negocios.head(20))
+print()
+
+print(
+    "Carpeta ejecución:"
+)
+
+print(
+    resultado.carpeta_ejecucion
+)
+
+print()
+
+print(
+    "Formato 351:"
+)
+
+print(
+    resultado.formato_351.ruta_destino
+)
+
+print()
+
+print(
+    "Mapas Contables:"
+)
+
+print(
+    resultado.mapas_contables.ruta_destino
+)
+
+print()
+
+print(
+    "Centros Costos:"
+)
+
+print(
+    resultado.mapas_centros_costos.ruta_destino
+)
 
 print()
 
 print("=" * 70)
-
-print("FORMATO 351")
-
-print("=" * 70)
-
-print(resultado.formato_351.head(20))
-
-print()
-
-print("=" * 70)
-
-print("RESUMEN")
-
-print("=" * 70)
-
-print(
-    "Base Negocios:",
-    len(resultado.base_negocios)
-)
-
-print(
-    "Formato 351:",
-    len(resultado.formato_351)
-)
-
-print(
-    "Cuentas transmisión:",
-    len(resultado.cuentas_transmision)
-)
