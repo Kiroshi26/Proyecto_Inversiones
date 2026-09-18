@@ -85,7 +85,6 @@ def aplicar_formato_excel(
         len(dataframe.columns) - 1,
         {
             "style": "Table Style Medium 1",
-            "columns": [{"header": c} for c in dataframe.columns],
         },
     )
 
