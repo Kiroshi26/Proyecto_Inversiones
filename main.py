@@ -1,220 +1,113 @@
+import sys
 import traceback
+from pathlib import Path
 
-from src.configuracion import (
-    cargar_configuracion,
-    validar_carpetas,
-    validar_configuracion_red,
-    validar_modo_seguro,
-)
-
-from src.credenciales import (
-    solicitar_credenciales,
-)
-
-from src.insumos import (
-    cargar_insumos,
-)
-
-from src.insumos_red import (
-    preparar_insumos_desde_red,
-)
-
-from src.logger import (
-    configurar_logger,
-)
-
-from src.parametros import (
-    crear_parametros,
-)
-
-from src.procesamiento import (
-    preparar_insumos,
-)
-
-from src.proceso_inversiones import (
-    ejecutar_proceso_inversiones,
-)
-
-from src.version import (
-    VERSION,
-    NOMBRE,
-)
+from src.configuracion import cargar_configuracion, validar_carpetas
+from src.credenciales import solicitar_credenciales
+from src.insumos import cargar_insumos
+from src.logger import configurar_logger
+from src.parametros import crear_parametros
+from src.proceso_inversiones import ejecutar_proceso_inversiones
+from src.version import NOMBRE, VERSION
 
 
 def solicitar_periodo():
-
     print()
     print("=" * 70)
-    print("PERIODO DE PROCESO")
+    print("PERIODO DE CONCILIACION")
     print("=" * 70)
-
-    anio = int(input("Año: "))
-
-    mes = int(input("Mes (1-12): "))
-
-    return anio, mes
+    while True:
+        try:
+            anio_input = input("Año (ej. 2026): ").strip()
+            anio = int(anio_input)
+            mes_input = input("Mes (1-12): ").strip()
+            mes = int(mes_input)
+            parametros = crear_parametros(anio=anio, mes=mes)
+            return parametros
+        except Exception as err:
+            print(f"Entrada no valida: {err}. Intente nuevamente.\n")
 
 
 def mostrar_resultado(resultado):
-
     print()
     print("=" * 70)
-    print("PROCESO FINALIZADO CORRECTAMENTE")
+    print("PROCESO FINALIZADO EXITOSAMENTE")
     print("=" * 70)
-
-    print()
-
-    print(f"Archivo generado : " f"{resultado.ruta_archivo}")
-
-    print(f"Registros SALDOS : " f"{resultado.cantidad_saldos:,}")
-
-    print(f"Registros BASENEG : " f"{resultado.cantidad_baseneg:,}")
-
-    print(f"TOTAL MES : " f"{resultado.total_mes:,.2f}")
-
-    print()
+    print(f"Archivo generado          : {resultado.ruta_archivo}")
+    print(f"Registros en SALDOS       : {resultado.cantidad_saldos:,}")
+    print(f"Registros en BASENEG      : {resultado.cantidad_baseneg:,}")
+    print(f"Total Saldo Contable      : ${resultado.total_saldo_contable:,.2f}")
+    print(f"Total Saldo F351          : ${resultado.total_saldo_f351:,.2f}")
+    print(f"Total Diferencias         : ${resultado.total_diferencias:,.2f}")
+    print(f"Partidas con diferencia   : {resultado.registros_con_diferencia:,}")
     print("=" * 70)
+    print()
 
 
 def main():
-
     logger = None
-
     try:
-
         print()
         print("=" * 70)
-        print(NOMBRE)
-        print(f"VERSION {VERSION}")
+        print(f" {NOMBRE} - v{VERSION}")
         print("=" * 70)
 
-        #
-        # Periodo
-        #
-        anio, mes = solicitar_periodo()
+        # 1. Periodo a conciliar
+        parametros = solicitar_periodo()
 
-        parametros = crear_parametros(
-            anio=anio,
-            mes=mes,
-        )
-
-        #
-        # Configuración
-        #
+        # 2. Configuracion y carpetas
         configuracion = cargar_configuracion()
+        rutas = validar_carpetas(configuracion)
 
-        validar_modo_seguro(configuracion)
+        # 3. Logger
+        logger = configurar_logger(rutas["logs"])
+        logger.info("Inicio del proceso de conciliacion de inversiones.")
+        logger.info("Periodo seleccionado: %s (Fecha corte: %s)", parametros.periodo, parametros.fecha_corte)
 
-        rutas_locales = validar_carpetas(configuracion)
-
-        rutas_red = validar_configuracion_red(configuracion)
-
-        #
-        # Log
-        #
-        logger = configurar_logger(rutas_locales["logs"])
-
-        logger.info("Inicio proceso.")
-
-        logger.info(
-            "Periodo: %s",
-            parametros.periodo,
-        )
-
-        #
-        # Copia insumos corporativos
-        #
+        # 4. Carga de Insumos (BASE_NEGOCIOS_FIDUCIARIOS y Formato 351)
         print()
-        print("Copiando insumos...")
+        print("Cargando archivos de insumos desde carpeta 'insumos'...")
+        insumos = cargar_insumos(configuracion)
 
-        ejecucion = preparar_insumos_desde_red(
-            configuracion=configuracion,
-            rutas_red=rutas_red,
-            carpeta_ejecuciones=(rutas_locales["ejecuciones"]),
-            fecha_corte=(parametros.fecha_corte),
-        )
+        logger.info("Base de negocios cargada: %d registros.", len(insumos.base_negocios))
+        logger.info("Formato 351 cargado y agregado: %d registros.", len(insumos.formato_351))
+        print(f"-> Base de Negocios Fiduciarios : {len(insumos.base_negocios):,} registros.")
+        print(f"-> Formato 351 (22 subcuentas)   : {len(insumos.formato_351):,} registros.")
 
-        logger.info(
-            "Carpeta ejecución: %s",
-            ejecucion.carpeta_ejecucion,
-        )
-
-        print("Insumos copiados correctamente.")
-
-        #
-        # Lectura insumos
-        #
+        # 5. Credenciales Optima / Nacional
         print()
-        print("Leyendo insumos...")
-
-        rutas_descargadas = {
-            "formato_351": ejecucion.formato_351.ruta_destino,
-            "mapas_contables": ejecucion.mapas_contables.ruta_destino,
-            "mapas_centros_costos": ejecucion.mapas_centros_costos.ruta_destino,
-        }
-
-        insumos = cargar_insumos(configuracion, rutas_descargadas)
-
-        resultado_preparacion = preparar_insumos(insumos)
-
-        logger.info(
-            "Base negocios: %s registros",
-            len(resultado_preparacion.base_negocios),
-        )
-
-        logger.info(
-            "Formato 351: %s registros",
-            len(resultado_preparacion.formato_351),
-        )
-
-        #
-        # Credenciales Nacional
-        #
+        print("Autenticación en Óptima (Nacional)...")
         usuario, clave = solicitar_credenciales()
 
-        #
-        # Proceso principal
-        #
+        # 6. Proceso principal
         print()
-        print("Consultando Nacional...")
-
+        print(f"Consultando Óptima y ejecutando conciliación para {parametros.periodo}...")
         resultado = ejecutar_proceso_inversiones(
             configuracion=configuracion,
             parametros=parametros,
-            resultado_preparacion=(resultado_preparacion),
+            insumos=insumos,
             usuario=usuario,
             clave=clave,
         )
 
-        logger.info(
-            "Archivo generado: %s",
-            resultado.ruta_archivo,
-        )
-
+        logger.info("Proceso completado exitosamente. Archivo: %s", resultado.ruta_archivo)
         mostrar_resultado(resultado)
-
         return 0
 
+    except KeyboardInterrupt:
+        print("\nProceso cancelado por el usuario.")
+        return 1
     except Exception as error:
-
         if logger is not None:
-
-            logger.exception("Error del proceso.")
-
+            logger.exception("Error durante la ejecucion del proceso.")
         print()
         print("=" * 70)
-        print("ERROR")
+        print("ERROR EN EL PROCESO")
         print("=" * 70)
-        print()
-
-        print(f"{type(error).__name__}: " f"{error}")
-
-        print()
+        print(f"{type(error).__name__}: {error}\n")
         traceback.print_exc()
-
         return 1
 
 
 if __name__ == "__main__":
-
-    raise SystemExit(main())
+    sys.exit(main())

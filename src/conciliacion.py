@@ -1,10 +1,14 @@
 from dataclasses import dataclass
+from typing import Optional
 
 import pandas as pd
 
+from src.insumos import normalizar_identificador
+from src.parametros import SUBCUENTAS_VALIDACION
+
 
 class ErrorConciliacion(Exception):
-    pass
+    """Error producido durante el proceso de conciliacion."""
 
 
 @dataclass
@@ -13,215 +17,49 @@ class ResultadoConciliacion:
     baseneg: pd.DataFrame
 
 
-def normalizar_texto(valor):
-
-    if pd.isna(valor):
-        return ""
-
-    texto = str(valor).strip()
-
-    if texto.lower() in {
-        "nan",
-        "none",
-        "nat",
-    }:
-        return ""
-
-    if texto.endswith(".0"):
-
-        parte_entera = texto[:-2]
-
-        if parte_entera.replace("-", "", 1).isdigit():
-            texto = parte_entera
-
-    return texto
+COLUMNAS_SALDOS = [
+    "Código SFC",
+    "Código contable",
+    "Grupo Óptima",
+    "Tipo",
+    "Subtipo",
+    "Nombre del negocio",
+    "Subcuenta CUIF",
+    "Saldo contable",
+    "Saldo F351",
+    "Diferencias",
+]
 
 
-def preparar_saldos_nacional(
-    saldos_nacional: pd.DataFrame,
-) -> pd.DataFrame:
+def preparar_saldos_nacional(saldos_nacional: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliza y filtra los saldos contables de Optima/Nacional para las 22 subcuentas oficiales.
+    """
+    if saldos_nacional.empty:
+        raise ErrorConciliacion("No existen registros de saldos en Nacional/Optima.")
 
     df = saldos_nacional.copy()
 
-    df["CONTABILIDAD"] = df["CONTABILIDAD"].apply(normalizar_texto)
+    # Identificar columna contable y cuenta
+    col_contable = "CONTABILIDAD" if "CONTABILIDAD" in df.columns else df.columns[1]
+    col_cuenta = "CUENTA" if "CUENTA" in df.columns else df.columns[2]
+    col_saldo = "TOTAL_MES" if "TOTAL_MES" in df.columns else df.columns[-1]
 
-    df["CUENTA"] = df["CUENTA"].apply(normalizar_texto)
+    df["CÓDIGO CONTABLE"] = df[col_contable].apply(normalizar_identificador)
+    df["Subcuenta CUIF"] = df[col_cuenta].apply(normalizar_identificador).str[:6]
+    df["Saldo contable"] = pd.to_numeric(df[col_saldo], errors="coerce").fillna(0.0)
 
-    df["CTA_6DG"] = df["CUENTA"].str[:6]
+    # Filtrar unicamente por las 22 subcuentas oficiales
+    df = df[df["Subcuenta CUIF"].isin(SUBCUENTAS_VALIDACION)].copy()
+    df = df[df["CÓDIGO CONTABLE"] != ""].copy()
 
-    return df
-
-
-def construir_baseneg(
-    base_negocios: pd.DataFrame,
-) -> pd.DataFrame:
-
-    columnas = [
-        "Nro. Super",
-        "Código contable",
-        "Nombre del Fideicomiso",
-    ]
-
-    resultado = base_negocios[columnas].drop_duplicates().copy()
-
-    resultado.sort_values(
-        by=[
-            "Nro. Super",
-            "Código contable",
-        ],
-        inplace=True,
-        kind="stable",
-        ignore_index=True,
-    )
-
-    return resultado
-
-
-def cruzar_base_negocios(
-    nacional: pd.DataFrame,
-    base_negocios: pd.DataFrame,
-) -> pd.DataFrame:
-
-    resultado = nacional.merge(
-        base_negocios,
-        left_on="CONTABILIDAD",
-        right_on="Código contable",
-        how="left",
-    )
-
-    return resultado
-
-
-def agrupar_por_super_y_cta(
-    dataframe: pd.DataFrame,
-) -> pd.DataFrame:
-
-    agrupado = dataframe.groupby(
-        [
-            "Nro. Super",
-            "CTA_6DG",
-        ],
-        as_index=False,
-        dropna=False,
-    ).agg(
-        TOTAL_MES=(
-            "TOTAL_MES",
-            "sum",
-        )
+    # Agrupar suma por (CÓDIGO CONTABLE, Subcuenta CUIF)
+    agrupado = (
+        df.groupby(["CÓDIGO CONTABLE", "Subcuenta CUIF"], as_index=False)["Saldo contable"]
+        .sum()
     )
 
     return agrupado
-
-
-def recuperar_informacion_negocio(
-    agrupado: pd.DataFrame,
-    base_negocios: pd.DataFrame,
-) -> pd.DataFrame:
-
-    informacion = base_negocios[
-        [
-            "Nro. Super",
-            "Código contable",
-            "Nombre del Fideicomiso",
-        ]
-    ].drop_duplicates(
-        subset=["Nro. Super"],
-        keep="first",
-    )
-
-    resultado = agrupado.merge(
-        informacion,
-        on="Nro. Super",
-        how="left",
-    )
-
-    return resultado
-
-
-def cruzar_formato_351(
-    dataframe: pd.DataFrame,
-    formato_351: pd.DataFrame,
-) -> pd.DataFrame:
-
-    trabajo = dataframe.copy()
-
-    trabajo["Nro. Super"] = trabajo["Nro. Super"].apply(normalizar_texto)
-
-    trabajo["CTA_6DG"] = trabajo["CTA_6DG"].apply(normalizar_texto)
-
-    formato = formato_351.copy()
-
-    formato["No. Sup351"] = formato["No. Sup351"].apply(normalizar_texto)
-
-    formato["Cta_Con351"] = formato["Cta_Con351"].apply(normalizar_texto)
-
-    resultado = trabajo.merge(
-        formato,
-        left_on=[
-            "Nro. Super",
-            "CTA_6DG",
-        ],
-        right_on=[
-            "No. Sup351",
-            "Cta_Con351",
-        ],
-        how="left",
-    )
-
-    resultado["Valor_351"] = pd.to_numeric(
-        resultado["Valor_351"],
-        errors="coerce",
-    ).fillna(0)
-
-    resultado["DIFERENCIA"] = resultado["TOTAL_MES"] - resultado["Valor_351"]
-
-    resultado.drop(
-        columns=[
-            "No. Sup351",
-            "Cta_Con351",
-        ],
-        inplace=True,
-        errors="ignore",
-    )
-
-    return resultado
-
-
-def construir_saldos_final(
-    dataframe: pd.DataFrame,
-) -> pd.DataFrame:
-
-    resultado = dataframe[
-        [
-            "Código contable",
-            "Nro. Super",
-            "Nombre del Fideicomiso",
-            "CTA_6DG",
-            "TOTAL_MES",
-            "Valor_351",
-            "DIFERENCIA",
-        ]
-    ].copy()
-
-    resultado.rename(
-        columns={
-            "Nro. Super": "No. Super",
-        },
-        inplace=True,
-    )
-
-    resultado.sort_values(
-        by=[
-            "Código contable",
-            "No. Super",
-            "CTA_6DG",
-        ],
-        inplace=True,
-        ignore_index=True,
-        kind="stable",
-    )
-
-    return resultado
 
 
 def ejecutar_conciliacion(
@@ -229,34 +67,97 @@ def ejecutar_conciliacion(
     base_negocios: pd.DataFrame,
     formato_351: pd.DataFrame,
 ) -> ResultadoConciliacion:
+    """
+    Ejecuta el motor de conciliacion segun las especificaciones de la Hoja 3 (Procedimiento).
+    
+    Aplica tanto el Caso 1 (negocios individuales) como el Caso 2 (negocios con Grupo Optima),
+    realizando un cruce completo (outer join) para reflejar:
+    - Negocios con movimientos en Optima y en F351.
+    - Negocios con movimientos solo en Optima (Saldo F351 = 0).
+    - Negocios con movimientos solo en F351 (Saldo contable = 0).
+    """
+    df_optima = preparar_saldos_nacional(saldos_nacional)
+    df_base = base_negocios.copy()
+    df_f351 = formato_351.copy()
 
-    if saldos_nacional.empty:
-        raise ErrorConciliacion("No existen registros de Nacional.")
+    # Asegurar nombres consistentes en df_base
+    cols_metadata = [
+        "CÓDIGO SFC",
+        "CÓDIGO CONTABLE",
+        "Grupo Óptima",
+        "Tipo",
+        "Subtipo",
+        "Nombre del negocio",
+    ]
+    df_base_meta = df_base[cols_metadata].drop_duplicates(subset=["CÓDIGO SFC", "CÓDIGO CONTABLE"])
 
-    nacional = preparar_saldos_nacional(saldos_nacional)
+    # 1. Asociar saldos de Optima con la metadata del negocio (por CÓDIGO CONTABLE)
+    optima_con_base = df_optima.merge(df_base_meta, on="CÓDIGO CONTABLE", how="inner")
 
-    nacional = cruzar_base_negocios(
-        nacional,
-        base_negocios,
+    # 2. Asociar saldos de F351 con la metadata del negocio (por CÓDIGO SFC)
+    # Nota: Si un Código SFC agrupa varios códigos contables (Caso 2), se asocia a cada uno.
+    f351_con_base = df_f351.merge(df_base_meta, on="CÓDIGO SFC", how="inner")
+
+    # 3. Construir el universo total de claves (CÓDIGO SFC, CÓDIGO CONTABLE, Subcuenta CUIF)
+    keys_optima = optima_con_base[cols_metadata + ["Subcuenta CUIF"]]
+    keys_f351 = f351_con_base[cols_metadata + ["Subcuenta CUIF"]]
+
+    keys_totales = (
+        pd.concat([keys_optima, keys_f351], ignore_index=True)
+        .drop_duplicates(subset=["CÓDIGO SFC", "CÓDIGO CONTABLE", "Subcuenta CUIF"])
+        .reset_index(drop=True)
     )
 
-    agrupado = agrupar_por_super_y_cta(nacional)
-
-    agrupado = recuperar_informacion_negocio(
-        agrupado,
-        base_negocios,
+    # 4. Cruzar saldos de Optima por (CÓDIGO CONTABLE, Subcuenta CUIF)
+    resultado = keys_totales.merge(
+        df_optima[["CÓDIGO CONTABLE", "Subcuenta CUIF", "Saldo contable"]],
+        on=["CÓDIGO CONTABLE", "Subcuenta CUIF"],
+        how="left",
     )
 
-    agrupado = cruzar_formato_351(
-        agrupado,
-        formato_351,
+    # 5. Cruzar saldos de F351 por (CÓDIGO SFC, Subcuenta CUIF)
+    resultado = resultado.merge(
+        df_f351[["CÓDIGO SFC", "Subcuenta CUIF", "Saldo F351"]],
+        on=["CÓDIGO SFC", "Subcuenta CUIF"],
+        how="left",
     )
 
-    saldos = construir_saldos_final(agrupado)
+    # 6. Rellenar nulos con 0.0 y calcular Diferencias
+    resultado["Saldo contable"] = resultado["Saldo contable"].fillna(0.0)
+    resultado["Saldo F351"] = resultado["Saldo F351"].fillna(0.0)
+    resultado["Diferencias"] = resultado["Saldo contable"] - resultado["Saldo F351"]
 
-    baseneg = construir_baseneg(base_negocios)
-
-    return ResultadoConciliacion(
-        saldos=saldos,
-        baseneg=baseneg,
+    # 7. Renombrar columnas al estandar oficial si difieren y limpiar vacios
+    resultado.rename(
+        columns={
+            "CÓDIGO SFC": "Código SFC",
+            "CÓDIGO CONTABLE": "Código contable",
+        },
+        inplace=True,
     )
+    resultado["Código SFC"] = resultado["Código SFC"].fillna("N/A").replace({"": "N/A"})
+    resultado["Grupo Óptima"] = resultado["Grupo Óptima"].fillna("N/A").replace({"": "N/A"})
+
+    # 8. Ordenar segun especificacion
+    resultado.sort_values(
+        by=["Código SFC", "Código contable", "Subcuenta CUIF"],
+        inplace=True,
+        ignore_index=True,
+        kind="stable",
+    )
+
+    saldos_final = resultado[COLUMNAS_SALDOS].copy()
+
+    # 9. Construir BASENEG (catalogo de negocios ordenado)
+    baseneg = df_base_meta.rename(
+        columns={
+            "CÓDIGO SFC": "Código SFC",
+            "CÓDIGO CONTABLE": "Código contable",
+        }
+    ).sort_values(
+        by=["Código SFC", "Código contable"],
+        ignore_index=True,
+        kind="stable",
+    )
+
+    return ResultadoConciliacion(saldos=saldos_final, baseneg=baseneg)

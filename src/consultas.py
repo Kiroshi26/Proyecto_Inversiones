@@ -1,10 +1,8 @@
-from src.parametros import MESES
+from src.parametros import MESES, SUBCUENTAS_VALIDACION
 
 
 class ErrorConsulta(Exception):
-    """
-    Error relacionado con la construccion de consultas SQL.
-    """
+    """Error relacionado con la construccion de consultas SQL."""
 
 
 COLUMNAS_MENSUALES = {
@@ -23,29 +21,18 @@ COLUMNAS_MENSUALES = {
 }
 
 
-def validar_periodo_consulta(anio, mes):
-    """
-    Valida los parametros utilizados para construir
-    la consulta contable.
-    """
-    if not isinstance(anio, int):
-        raise ErrorConsulta("El anio debe ser un numero entero.")
+def validar_periodo_consulta(anio: int, mes: int) -> None:
+    if not isinstance(anio, int) or not isinstance(mes, int):
+        raise ErrorConsulta("El anio y el mes deben ser numeros enteros.")
 
-    if not isinstance(mes, int):
-        raise ErrorConsulta("El mes debe ser un numero entero.")
-
-    if not 2022 <= anio <= 2031:
+    if not 2020 <= anio <= 2035:
         raise ErrorConsulta(f"El anio {anio} no esta permitido.")
 
     if mes not in COLUMNAS_MENSUALES:
         raise ErrorConsulta(f"El mes {mes} no esta configurado.")
 
 
-def obtener_columnas_hasta_mes(mes):
-    """
-    Obtiene las columnas mensuales de debito y credito
-    desde enero hasta el mes solicitado.
-    """
+def obtener_columnas_hasta_mes(mes: int):
     if mes not in COLUMNAS_MENSUALES:
         raise ErrorConsulta(f"El mes {mes} no esta configurado.")
 
@@ -54,103 +41,63 @@ def obtener_columnas_hasta_mes(mes):
 
     for numero_mes in range(1, mes + 1):
         debito, credito = COLUMNAS_MENSUALES[numero_mes]
-
         debitos.append(debito)
         creditos.append(credito)
 
     return debitos, creditos
 
 
-def validar_nombre_columna(columna):
-    """
-    Valida que un nombre de columna solo contenga
-    caracteres alfanumericos.
-    """
+def validar_nombre_columna(columna: str) -> str:
     nombre = str(columna).strip().upper()
-
     if not nombre:
         raise ErrorConsulta("Se encontro un nombre de columna vacio.")
-
     if not nombre.isalnum():
-        raise ErrorConsulta(
-            "El nombre de columna contiene caracteres " f"no permitidos: {nombre}"
-        )
-
+        raise ErrorConsulta(f"El nombre de columna contiene caracteres no permitidos: {nombre}")
     return nombre
 
 
-def construir_suma(columnas, alias="A"):
-    """
-    Construye una suma SQL a partir de varias columnas.
-
-    Ejemplo:
-        A.ENDTER + A.FEDTER + A.MADTER
-    """
+def construir_suma(columnas, alias="A") -> str:
     if not columnas:
         return "0"
-
     expresiones = []
-
     for columna in columnas:
         nombre = validar_nombre_columna(columna)
-
         expresiones.append(f"{alias}.{nombre}")
-
     return " + ".join(expresiones)
 
 
-def construir_movimiento_neto(
-    debitos,
-    creditos,
-    alias="A",
-):
-    """
-    Construye la expresion SQL de movimientos netos.
-
-    Cada movimiento se calcula como debito menos credito.
-    """
+def construir_movimiento_neto(debitos, creditos, alias="A") -> str:
     if len(debitos) != len(creditos):
-        raise ErrorConsulta(
-            "La cantidad de columnas de debito y credito " "no coincide."
-        )
-
+        raise ErrorConsulta("La cantidad de columnas de debito y credito no coincide.")
     if not debitos:
         return "0"
-
     expresiones = []
-
-    for debito, credito in zip(
-        debitos,
-        creditos,
-    ):
+    for debito, credito in zip(debitos, creditos):
         nombre_debito = validar_nombre_columna(debito)
-
         nombre_credito = validar_nombre_columna(credito)
-
-        expresiones.append(f"(A.{nombre_debito} - A.{nombre_credito})")
-
+        expresiones.append(f"({alias}.{nombre_debito} - {alias}.{nombre_credito})")
     return " + ".join(expresiones)
 
 
-def construir_consulta_saldos(anio, mes):
-    """
-    Construye la consulta SQL de saldos contables.
-
-    La consulta usa exclusivamente SCTATER porque
-    el diagnostico demostro que la union con TERCER
-    no modifica las filas ni los valores.
-    """
-    validar_periodo_consulta(
-        anio,
-        mes,
+def construir_filtro_cuentas(alias="A") -> str:
+    """Construye la condicion SQL para filtrar las cuentas contables."""
+    # Cubre las 22 subcuentas definidas: disponible (111505, 111510), inversiones (13%),
+    # activos fiduciarios (182705) y cuentas de orden (821505)
+    return (
+        f"({alias}.CTATER LIKE '111505%' OR {alias}.CTATER LIKE '111510%' OR "
+        f"{alias}.CTATER LIKE '13%' OR {alias}.CTATER LIKE '182705%' OR {alias}.CTATER LIKE '821505%')"
     )
 
+
+def construir_consulta_saldos(anio: int, mes: int) -> str:
+    """
+    Construye la consulta SQL de saldos contables en SCTATER para las subcuentas oficiales.
+    """
+    validar_periodo_consulta(anio, mes)
+
     debitos_acumulados, creditos_acumulados = obtener_columnas_hasta_mes(mes)
-
     debito_mes, credito_mes = COLUMNAS_MENSUALES[mes]
-
     debito_mes = validar_nombre_columna(debito_mes)
-
     credito_mes = validar_nombre_columna(credito_mes)
 
     if mes == 1:
@@ -158,22 +105,12 @@ def construir_consulta_saldos(anio, mes):
         creditos_anteriores = []
     else:
         debitos_anteriores = debitos_acumulados[:-1]
-
         creditos_anteriores = creditos_acumulados[:-1]
 
     suma_debitos = construir_suma(debitos_acumulados)
-
     suma_creditos = construir_suma(creditos_acumulados)
-
-    movimiento_acumulado = construir_movimiento_neto(
-        debitos_acumulados,
-        creditos_acumulados,
-    )
-
-    movimiento_anterior = construir_movimiento_neto(
-        debitos_anteriores,
-        creditos_anteriores,
-    )
+    movimiento_acumulado = construir_movimiento_neto(debitos_acumulados, creditos_acumulados)
+    movimiento_anterior = construir_movimiento_neto(debitos_anteriores, creditos_anteriores)
 
     if mes == 1:
         expresion_saldo_anterior = "A.INITER"
@@ -181,6 +118,7 @@ def construir_consulta_saldos(anio, mes):
         expresion_saldo_anterior = f"A.INITER + {movimiento_anterior}"
 
     expresion_total_mes = f"A.INITER + {movimiento_acumulado}"
+    filtro_cuentas = construir_filtro_cuentas(alias="A")
 
     consulta = f"""
 SELECT
@@ -197,26 +135,14 @@ SELECT
     ({expresion_total_mes}) AS TOTAL_MES
 FROM FOPLIBNOR3.SCTATER A
 WHERE A.ANOTER = {anio}
-    AND A.CTATER LIKE '13%'
+    AND {filtro_cuentas}
     AND ({expresion_total_mes}) <> 0
 """.strip()
-
-    if not consulta:
-        raise ErrorConsulta("La consulta SQL quedo vacia.")
 
     return consulta
 
 
-def obtener_descripcion_consulta(anio, mes):
-    """
-    Devuelve una descripcion legible
-    del periodo consultado.
-    """
-    validar_periodo_consulta(
-        anio,
-        mes,
-    )
-
+def obtener_descripcion_consulta(anio: int, mes: int) -> str:
+    validar_periodo_consulta(anio, mes)
     abreviatura, nombre = MESES[mes]
-
-    return f"Consulta de saldos para {nombre} de {anio} " f"({abreviatura})"
+    return f"Consulta de saldos para {nombre} de {anio} ({abreviatura})"

@@ -1,69 +1,26 @@
 proyecto:
-  nombre: "Validacion de Inversiones"
-  modo: "pruebas"
-  publicar_resultados_corporativos: false
+  nombre: "Conciliacion de Inversiones Fiduciarias"
+  modo: "produccion"
 
 base_datos:
   dsn: "NACIONALET01"
   habilitada: true
   timeout_segundos: 120
 
-excel:
-  hoja_parametros: "Info"
-  celda_anio: "C4"
-  celda_mes: "E6"
-  celda_estado: "F16"
-
-archivos:
-  plantilla: "Mac_Inver_2.xlsb"
-
-  # NECESARIO PARA insumos.py
-  formato_351: "Formato351_Fiduciaria.xls"
-
-  # NECESARIO PARA insumos_red.py
-  formato_351_patron: "Formato351_Fiduciaria_{fecha_corte}.xls"
-
-  mapas_contables: "BASE MAPAS CONTABLES.xlsb"
-
-  mapas_centros_costos: "BASE MAPAS CONTABLES CON CENTROS DE COSTOS.xlsx"
-
-  saldos_referencia: "Saldos_Inversiones.xlsx"
-
-hojas:
-  formato_351: "F_351_FIDUCIARIA"
-  negocios_vigentes: "NEGOCIOS VIGENTES"
-  negocios_cancelados: "CANCELADOS"
-  centros_costos: "CENTRO DE COSTOS "
-
-rutas_red:
-  formato_351: "//sbbogscl0/vfinanci/Gerencia Contabilidad Impuestos Clientes/Gerencia contabilidad e impuestos clientes/RAZONABILIDAD New/Pruebas transversales/3. INVERSIONES/Datos"
-
-  mapas_contables: "//sbbogscl0/vfinanci/Gerencia Contabilidad Impuestos Clientes/Gerencia contabilidad e impuestos clientes/PARAMETRIZACION/BASE SUPER"
-
 rutas:
   proyecto: "C:/Proyectos/Proyecto_Inversiones"
-
-  insumos_prueba: "C:/Proyectos/Proyecto_Inversiones/pruebas/insumos"
-
-  insumos_respaldo: "C:/Proyectos/Proyecto_Inversiones/pruebas/insumos_respaldo"
-
-  ejecuciones: "C:/Proyectos/Proyecto_Inversiones/pruebas/ejecuciones"
-
-  datos_prueba: "C:/Proyectos/Proyecto_Inversiones/pruebas/datos"
-
-  informes_prueba: "C:/Proyectos/Proyecto_Inversiones/pruebas/informes"
-
-  comparaciones: "C:/Proyectos/Proyecto_Inversiones/pruebas/comparaciones"
-
-  respaldos: "C:/Proyectos/Proyecto_Inversiones/pruebas/respaldos"
-
+  insumos: "C:/Proyectos/Proyecto_Inversiones/insumos"
+  salidas: "C:/Proyectos/Proyecto_Inversiones/salidas"
   logs: "C:/Proyectos/Proyecto_Inversiones/logs"
 
-salidas:
-  saldos_prueba: "Saldos_Inversiones_PRUEBA.xlsx"
-  sufijo_prueba: "_PRUEBA"
+archivos:
+  base_negocios: "BASE_NEGOCIOS_FIDUCIARIOS.xlsx"
+  formato_351: "Formato351_Fiduciaria_20260930.xlsx"
+  formato_351_patron: "Formato351_Fiduciaria*.xlsx"
 
-reglas:
-  diferencia_cero_sin_valor_351: true
-  tolerancia_monetaria: 0.01
-  conservar_registros_sin_valor_351: true
+hojas:
+  base_negocios: "BASE NEG FIDU"
+  formato_351: "F_351_FIDUCIARIA"
+
+salidas:
+  archivo_resultado: "Saldos_Inversiones.xlsx"
