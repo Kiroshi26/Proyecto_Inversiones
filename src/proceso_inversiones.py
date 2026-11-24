@@ -20,6 +20,7 @@ class ErrorProcesoInversiones(Exception):
 class ResultadoProcesoInversiones:
     ruta_archivo: Path
     cantidad_saldos: int
+    cantidad_subcuentas: int
     cantidad_baseneg: int
     total_saldo_contable: float
     total_saldo_f351: float
@@ -102,6 +103,7 @@ def ejecutar_proceso_inversiones(
     return ResultadoProcesoInversiones(
         ruta_archivo=ruta_archivo,
         cantidad_saldos=len(df_saldos),
+        cantidad_subcuentas=len(resultado_conciliacion.resumen_subcuentas),
         cantidad_baseneg=len(resultado_conciliacion.baseneg),
         total_saldo_contable=total_contable,
         total_saldo_f351=total_f351,

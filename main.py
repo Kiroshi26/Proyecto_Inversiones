@@ -59,6 +59,14 @@ def mostrar_resultado(resultado):
         f"Partidas con diferencia   : "
         f"{resultado.registros_con_diferencia:,}"
     )
+    print(f"Archivo generado          : {resultado.ruta_archivo}")
+    print(f"Registros en SALDOS       : {resultado.cantidad_saldos:,}")
+    print(f"Subcuentas resumidas      : {resultado.cantidad_subcuentas:,}")
+    print(f"Registros en BASENEG      : {resultado.cantidad_baseneg:,}")
+    print(f"Total Saldo Contable      : ${resultado.total_saldo_contable:,.2f}")
+    print(f"Total Saldo F351          : ${resultado.total_saldo_f351:,.2f}")
+    print(f"Total Diferencias         : ${resultado.total_diferencias:,.2f}")
+    print(f"Partidas con diferencia   : {resultado.registros_con_diferencia:,}")
     print("=" * 70)
     print()
 
